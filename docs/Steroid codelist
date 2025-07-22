@@ -1,0 +1,77 @@
+-- MAKING THE TABLES FORM THE CODELISTS ONLINE--
+
+# (1) Other steroid table from: yhcr-prd-phm-bia-core.CB_MYSPACE_KF.other_steroid_codelist
+# (2) Run with CB_BNF_DMD_SNOMED list
+# (3) Save as yhcr-prd-phm-bia-core.CB_MYSPACE_KF.FINAL_other_steroid_list
+SELECT 
+a.prodcode as code, a.prodname as term, b.BNF_Code, b.BNF_Name, b.SNOMED_Code, b.DMplusD_ProductDescription,
+b.DMplusD__Product_and_PackDescription, b.Pack
+FROM 
+`yhcr-prd-phm-bia-core.CB_MYSPACE_KF.other_steroid_codelist` a,
+`yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_BNF_DMD_SNOMED_lkp` b
+
+WHERE a.prodname = b.BNF_name
+
+# (1) Steroid table from: yhcr-prd-phm-bia-core.CB_MYSPACE_KF.oral_steroid_codes_open_codelist
+# (2) Run with CB_BNF_DMD_SNOMED list
+# (3) Save as yhcr-prd-phm-bia-core.CB_MYSPACE_KF.FINAL_oral_steroid_list
+SELECT
+a.code, a.term,
+b.BNF_Code, b.BNF_Name, b.SNOMED_Code, b.DMplusD_ProductDescription,
+b.DMplusD__Product_and_PackDescription, b.Pack
+FROM `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.oral_steroid_codes_open_codelist` a,
+`yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_BNF_DMD_SNOMED_lkp` b
+WHERE a.BNF_code = b.BNF_code
+
+# (1) Prednisolone table from: yhcr-prd-phm-bia-core.CB_MYSPACE_KF.Oral_Pred_codes_open_codelist
+# (2) Convert 'code' from integer to string, saved as additional column BNF_code in yhcr-prd-phm-bia-core.CB_MYSPACE_KF.cb_pred_codelist_converted
+# (3) Run with CB_BNF_DMD_SNOMED list
+# (4) Save as yhcr-prd-phm-bia-core.CB_MYSPACE_KF.FINAL_oral_pred_list
+SELECT 
+a.code, a.term,
+b.BNF_Code, b.BNF_Name, b.SNOMED_Code, b.DMplusD_ProductDescription,
+b.DMplusD__Product_and_PackDescription, b.Pack
+FROM `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.cb_steroid_codelist_converted` a,
+`yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_BNF_DMD_SNOMED_lkp` b
+WHERE a.BNF_code = b.BNF_code
+
+--CHECKING THE TABLES--
+
+#Oral pred list and oral steroid lists from opencodelists are identical --> will use oral steroid list only
+SELECT * FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.FINAL_oral_steroid_list
+EXCEPT DISTINCT
+SELECT * FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.FINAL_oral_pred_list
+
+#Oral steroid list and other steroid list - comparing the two tables yielded 26 extra codes
+SELECT BNF_name, 'table1' AS source_table
+
+FROM (
+  SELECT BNF_name FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.FINAL_oral_steroid_list
+  EXCEPT DISTINCT
+  SELECT BNF_name FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.FINAL_other_steroid_list
+) 
+
+UNION ALL 
+SELECT
+BNF_name, 
+'table2' AS source_table
+
+FROM(
+SELECT BNF_name
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.FINAL_other_steroid_list
+  EXCEPT DISTINCT
+  SELECT BNF_name FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.FINAL_oral_steroid_list
+
+
+#Created a table Extra_steroid_codes with date relating to the 26 extra codes named yhcr-prd-phm-bia-core.CB_MYSPACE_KF.FINAL_Extra_steroid_codes
+SELECT * 
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.FINAL_other_steroid_list
+WHERE BNF_name IN ('Dexamethasone 2mg tablets', 'Deflazacort 30mg tablets', 'Methylprednisolone 16mg tablets', 'Budesonide 3mg gastro-resistant modified-release capsules', 'Dexamethasone 2mg/5ml oral solution sugar free', 'Methylprednisolone 4mg tablets', 'Beclometasone 5mg gastro-resistant modified-release tablets', 'Hydrocortisone 10mg tablets', 'Methylprednisolone 100mg tablets', 'Prednisone 1mg modified-release tablets', 'Betamethasone 500microgram tablets', 'Betamethasone 500microgram soluble tablets sugar free', 'Prednisone 2mg modified-release tablets', 'Cortisone 5mg capsules', 'Hydrocortisone 10mg/5ml oral suspension', 'Deflazacort 6mg tablets', 'Deflazacort 1mg tablets', 'Dexamethasone 500microgram tablets', 'Dexamethasone 100microgram capsules', 'Prednisone 5mg modified-release tablets', 'Hydrocortisone 20mg tablets', 'Prednisolone 5mg soluble tablets', 'Methylprednisolone 2mg tablets', 'Budesonide 3mg gastro-resistant capsules', 'Cortisone 25mg tablets', 'Prednisolone 50mg tablets')
+    
+    
+--CREATE A MASTER TABLE OF STEROID CODES--
+
+#Saved as yhcr-prd-phm-bia-core.CB_MYSPACE_KF.Final steroid codelist
+SELECT * FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.FINAL_oral_steroid_list
+UNION ALL
+SELECT * FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.FINAL_Extra_steroid_codes
