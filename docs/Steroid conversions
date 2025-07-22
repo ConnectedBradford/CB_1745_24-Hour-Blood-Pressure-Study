@@ -1,0 +1,122 @@
+#Join the two tables (mg and micrograms) with UNION ALL
+
+CREATE TABLE `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions` AS
+SELECT
+  person_id,
+  diagnosis,
+  GCA_PMR_date_of_diagnosis,
+  datemedicationstart,
+  datemedicationend,
+  duration_in_days,
+  name_of_medication,
+  medicationdosage,
+  medicationquantity,
+  number_of_tablets,
+  conversion_factor,
+  steroid_dosage,
+  equivalence_dose_to_pred1mg
+
+FROM 
+
+(
+#Create equivalence_dose_to_pred1mg for microgram doses with conversion_factor
+SELECT
+  *,
+  steroid_dosage * conversion_factor AS equivalence_dose_to_pred1mg
+
+FROM
+
+#Convert micrograms to miligrams in new steroid_dose column
+(SELECT
+  *,
+  CASE
+    WHEN REGEXP_CONTAINS(name_of_medication, r'\d+microgram') THEN
+      CAST(REGEXP_REPLACE(REGEXP_EXTRACT(name_of_medication, r'(\d+)microgram'), r'microgram', '') AS FLOAT64) / 1000.0
+  END AS steroid_dosage
+FROM
+
+  (SELECT *
+  FROM
+
+#LEFT JOIN between first half of table with tablet quantities and steroid conversion table
+  (SELECT
+    t1.person_id,
+    t1.diagnosis,
+    t1.GCAPMR_date_of_diagnosis,
+    t1.datemedicationstart,
+    t1.datemedicationend,
+    t1.duration_in_days,
+    t1.name_of_medication,
+    t1.medicationdosage,
+    t1.medicationquantity,
+    t1.number_of_tablets,
+    t2.conversion_factor
+
+  FROM `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_number_of_tablets` t1
+  LEFT JOIN `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_conversion_factors` t2
+  ON t1.name_of_medication = t2.full_steroid_name)
+
+#SELECT name_of_medication where doses are in micrograms
+  WHERE name_of_medication IN (
+    'Dexamethasone 500microgram tablets (Essential Generics Ltd)',
+    'Dexamethasone 500microgram tablets')
+    )
+)
+
+) 
+
+UNION ALL
+SELECT
+  person_id,
+  diagnosis,
+  GCAPMR_date_of_diagnosis,
+  datemedicationstart,
+  datemedicationend,
+  duration_in_days,
+  name_of_medication,
+  medicationdosage,
+  medicationquantity,
+  number_of_tablets,
+  conversion_factor,
+  steroid_dosage,
+  equivalence_dose_to_pred1mg
+
+FROM 
+
+#Extract numeric dosage value from name_of_medication and multiply by conversion factor, casting as a FLOAT variable - for all mg doses (micrograms dealt with above)
+(SELECT
+  *,
+  CAST(REGEXP_EXTRACT(name_of_medication, r'(\d+(?:\.\d+)?)(?:mg|microgram)') AS FLOAT64) AS steroid_dosage,
+  CAST(REGEXP_EXTRACT(name_of_medication, r'(\d+(?:\.\d+)?)(?:mg|microgram)') AS FLOAT64) * conversion_factor AS equivalence_dose_to_pred1mg
+
+FROM
+
+(SELECT 
+*
+
+FROM
+#LEFT JOIN between first half of table with tablet quantities and steroid conversion table
+(SELECT
+    t1.person_id,
+    t1.diagnosis,
+    t1.GCAPMR_date_of_diagnosis,
+    t1.datemedicationstart,
+    t1.datemedicationend,
+    t1.duration_in_days,
+    t1.name_of_medication,
+    t1.medicationdosage,
+    t1.medicationquantity,
+    t1.number_of_tablets,
+    t2.conversion_factor
+
+  FROM `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_number_of_tablets` t1
+  LEFT JOIN `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_conversion_factors` t2
+  ON t1.name_of_medication = t2.full_steroid_name)
+
+#Exclude values where dose is in micrograms
+  WHERE name_of_medication NOT IN (
+    'Dexamethasone 500microgram tablets (Essential Generics Ltd)',
+    'Dexamethasone 500microgram tablets')
+
+)
+)
