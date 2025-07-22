@@ -1,0 +1,128 @@
+# Load the required library
+library(bigrquery)
+
+# Store the project ID
+project_id <- "yhcr-prd-bradfor-bia-core"
+
+# Specify the dataset and table
+dataset <- "CB_1745"
+table_name <- "QRISK_suppl2_variables_withoutcvd_smokenullsfixed"
+
+
+# Construct the SQL query
+sql_query <- paste("
+SELECT 
+  patid,
+  gender,
+  age,
+  atrial_fibrillation,
+  atypical_antipsy,
+  regular_steroid_tablets,
+  erectile_disfunction,
+  migraine,
+  rheumatoid_arthritis,
+  chronic_kidney_disease,
+  severe_mental_illness,
+  systemic_lupus_erythematosis,
+  blood_pressure_treatment,
+  diabetes1,
+  diabetes2,
+  weight,
+  height,
+  ethinicity,
+  heart_attack_relative,
+  cholesterol_HDL_ratio,
+  systolic_blood_pressure,
+  std_systolic_blood_pressure,
+  smoke,
+  townsend
+FROM `", project_id, ".", dataset, ".", table_name, "`", sep = "")
+
+# Run the query
+query_job <- bq_project_query(project_id, sql_query)
+
+# Load the results into an R data frame called "qrisk_data"
+qrisk_data <- bq_table_download(query_job)
+
+# Display the first few rows of the data
+print(head(qrisk_data))
+
+# Print the dimensions of the data frame
+print(dim(qrisk_data))
+
+# Print a summary of the data
+print(summary(qrisk_data))
+
+
+
+#Install QRISK package
+install.packages("QRISK3")
+library(QRISK3)
+
+#Fix errors
+qrisk_data$systolic_blood_pressure <- as.numeric(qrisk_data$systolic_blood_pressure)
+qrisk_data$gender <- as.numeric(qrisk_data$gender)
+qrisk_data$atrial_fibrillation <- as.numeric(qrisk_data$atrial_fibrillation)
+qrisk_data$atypical_antipsy <- as.numeric(qrisk_data$atypical_antipsy)
+qrisk_data$regular_steroid_tablets <- as.numeric(qrisk_data$regular_steroid_tablets) 
+qrisk_data$erectile_disfunction <- as.numeric(qrisk_data$erectile_disfunction) 
+qrisk_data$migraine <- as.numeric(qrisk_data$migraine) 
+qrisk_data$rheumatoid_arthritis <- as.numeric(qrisk_data$rheumatoid_arthritis) 
+qrisk_data$chronic_kidney_disease <- as.numeric(qrisk_data$chronic_kidney_disease) 
+qrisk_data$severe_mental_illness  <- as.numeric(qrisk_data$severe_mental_illness) 
+qrisk_data$systemic_lupus_erythematosis  <- as.numeric(qrisk_data$systemic_lupus_erythematosis) 
+qrisk_data$blood_pressure_treatment  <- as.numeric(qrisk_data$blood_pressure_treatment) 
+qrisk_data$diabetes1 <- as.numeric(qrisk_data$diabetes1) 
+qrisk_data$diabetes2 <- as.numeric(qrisk_data$diabetes2) 
+qrisk_data$ethinicity <- as.numeric(qrisk_data$ethinicity) 
+qrisk_data$heart_attack_relative <- as.numeric(qrisk_data$heart_attack_relative) 
+qrisk_data$smoke <- as.numeric(qrisk_data$smoke)
+
+
+
+results <- QRISK3_2017(
+  data = qrisk_data,
+  patid = "patid",
+  gender = "gender",
+  age = "age",
+  atrial_fibrillation = "atrial_fibrillation",
+  atypical_antipsy = "atypical_antipsy",
+  regular_steroid_tablets = "regular_steroid_tablets",
+  erectile_disfunction = "erectile_disfunction",
+  migraine = "migraine",
+  rheumatoid_arthritis = "rheumatoid_arthritis",
+  chronic_kidney_disease = "chronic_kidney_disease",
+  severe_mental_illness = "severe_mental_illness",
+  systemic_lupus_erythematosis = "systemic_lupus_erythematosis",
+  blood_pressure_treatment = "blood_pressure_treatment",
+  diabetes1 = "diabetes1",
+  diabetes2 = "diabetes2",
+  weight = "weight",
+  height = "height",
+  ethiniciy = "ethinicity",  # Note the spelling
+  heart_attack_relative = "heart_attack_relative",
+  cholesterol_HDL_ratio = "cholesterol_HDL_ratio",
+  systolic_blood_pressure = "systolic_blood_pressure",
+  std_systolic_blood_pressure = "std_systolic_blood_pressure",
+  smoke = "smoke",
+  townsend = "townsend"
+)
+
+# Calculate median and IQR
+median_QRISK3_2017 <- median(results$QRISK3_2017, na.rm = TRUE)
+q1 <- quantile(results$QRISK3_2017, 0.25, na.rm = TRUE)
+q3 <- quantile(results$QRISK3_2017, 0.75, na.rm = TRUE)
+iqr_QRISK3_2017 <- q3 - q1
+
+# Calculate mean and standard deviation
+mean_QRISK3_2017 <- mean(results$QRISK3_2017, na.rm = TRUE)
+sd_QRISK3_2017 <- sd(results$QRISK3_2017, na.rm = TRUE)
+
+# Print results
+print(paste("Median QRISK3_2017 score:", round(median_QRISK3_2017, 2)))
+print(paste("Interquartile Range (IQR):", round(iqr_QRISK3_2017, 2)))
+print(paste("Median (IQR):", round(median_QRISK3_2017, 2), "(", round(q1, 2), "-", round(q3, 2), ")"))
+
+print(paste("Mean QRISK3_2017 score:", round(mean_QRISK3_2017, 2)))
+print(paste("Standard Deviation:", round(sd_QRISK3_2017, 2)))
+print(paste("Mean (SD):", round(mean_QRISK3_2017, 2), "±", round(sd_QRISK3_2017, 2)))
