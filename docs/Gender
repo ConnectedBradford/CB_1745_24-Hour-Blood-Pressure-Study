@@ -1,0 +1,15 @@
+#Count numbers per each sex group
+SELECT COUNT(person_id) as number, gender as sex
+FROM (
+   SELECT DISTINCT 
+      b.person_id,
+      b.gender
+    FROM yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srpatient b,
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+    JOIN
+      yhcr-prd-phm-bia-core.CB_1745.Just_GCA_Cohort b
+    ON 
+      a.person_id = b.person_id) a
+      WHERE a.person_id = b.person_id
+)
+GROUP BY sex
