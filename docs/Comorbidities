@@ -1,0 +1,1462 @@
+COMORBIDITIES
+All codeslits from opensafely
+
+
+#Generic code - if need to convert ctv3 to snomed
+
+***
+
+
+WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.PAD_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.PAD_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  JoinedData
+WHERE
+  rn = 1;
+
+
+***
+
+
+
+#Heart failure
+-- Merged Heart Failure, heart failure codes, Reduced ejection fraction (heart failure) codes, Incident heart failure, incident heart failure
+
+
+
+
+
+WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.hf_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.heart_failure_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  JoinedData
+WHERE
+  rn = 1;
+
+
+*************
+#Updated - had some duplicates in T1 and T2; if CKD only - T2, if T1 and T2, T1. 
+#Diabetes - Type 1 
+-- combined codes for Type 1 Diabetes ctv3/ Codes for type 1 diabetes / Diabetes Type 1 codes used in National Audit
+#Diabetes - Type 2 
+-- Combined codes for diabetes (non-type 1)/ codes for diabetes (type 2)/Diabetes Type 2 codes used in National Audit/Type 2 Diabetes ctv3
+
+
+WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T2DM_ctv3` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T2DM_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+    AND a.person_id NOT IN (13057852, 13560199, 12984152)
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  JoinedData
+WHERE
+  rn = 1;
+
+    
+#For both - checked person_id not in diabetes_in_remission x2 codelists
+
+
+SELECT DISTINCT
+  a.person_id,
+  b.ctv3text
+FROM  
+  `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+JOIN 
+  `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+ON 
+  a.person_id = b.person_id
+JOIN 
+  (SELECT 
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.diabetes_resolved`) c
+ON 
+  b.snomedcode = c.code
+WHERE 
+  b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis;
+
+
+# diabetes type unknown codelist
+
+-- First subquery: Convert CTV3 codes to SNOMED codes
+WITH CTV3ToSnomed AS (
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.diabetes_type_unknown_ctv3` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+),
+
+-- Second subquery: Deduplicate the SNOMED codes
+DeduplicatedSnomed AS (
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+-- Third subquery: Join with final cohort and primary care table, selecting the latest ctv3text for each person_id
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed ds
+  ON
+    b.snomedcode = ds.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  JoinedData
+WHERE
+  rn = 1
+  AND person_id NOT IN (
+    SELECT person_id FROM
+
+(SELECT * FROM
+
+(WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T1DM_ctv3` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T1DM_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+    AND a.person_id NOT IN (13057852, 13560199, 12984152)
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  JoinedData
+WHERE
+  rn = 1
+
+)
+
+UNION ALL 
+
+SELECT * 
+
+FROM 
+
+(WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T2DM_ctv3` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T2DM_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+    AND a.person_id NOT IN (13057852, 13560199, 12984152)
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  JoinedData
+WHERE
+  rn = 1
+)
+)
+  );
+
+
+
+*************
+
+#Stroke
+
+-- Merged Haemorrhgaic stroke codes/incident stroke/incident non-traumatic stroke/non-haemorrhagic stroke/stroke (snomed)/storke (updated)/stroke diagnosis codes/has_stroke_or_tia/transient ischaemic attack x2 lists
+
+
+
+
+WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.CVA_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.CVA_snomed_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  JoinedData
+WHERE
+  rn = 1;
+
+
+********
+
+#Coronary artery disease
+WITH FilteredData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.coronary_HD_codes` c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis  -- Replace with the actual column names
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  FilteredData
+WHERE
+  rn = 1;
+
+
+*******
+
+#CKD
+-- combined Chronic kidney disease codes - all stages x2 / Chronic kidney disease codes - all stages with numeric column / Chronic kidney disease codes-stages 3 - 5 x2 / Chronic kidney disease diagnostic codes x2 / CKD stage /CKD stage 5 (SNOMED CT) /CKD stage 5 codes / Chronic kidney disease (CKD) stage 1 and 2 codes x2 /  Chronic kidney disease (CKD) stage 3, 4 and 5 codes /  Chronic kidney disease (CKD) stage 3-5 codes / Chronic kidney disease (CKD) stage 4 and 5 codes / Codes for proteinuria for chronic kidney disease (CKD) /  
+
+WITH FilteredData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids  a
+  JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+
+  (SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    (SELECT 
+  CAST(code AS STRING) AS code, 
+  term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.CKD_codes`)
+  GROUP BY
+    code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis  -- Replace with the actual column names
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  FilteredData
+WHERE
+  rn = 1;
+
+
+****
+
+#Asthma
+#Asthma resolved
+
+-- Codeslists : Asthma / Asthma Diagnosis / Asthma Diagnosis (SNOMED) / Asthma Diagnosis codes x4 / Current Asthma / Mild and intermittent asthma diagnosis codes / Moderate asthma diagnosis codes / Severe asthma diagnosis codes / has_asthma
+
+
+WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.asthma_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.asthma_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.tbl_srcode_start_date,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+),
+
+AsthmaResolved AS (
+  WITH FilteredData AS (
+    SELECT
+      a.person_id,
+      b.ctv3text,
+      b.tbl_srcode_start_date,
+      ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+    FROM
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+    JOIN 
+      `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+    ON 
+      a.person_id = b.person_id
+    JOIN 
+      (SELECT
+        code,
+        ANY_VALUE(term) AS term
+      FROM
+        (SELECT 
+          CAST(code AS STRING) AS code, 
+          term
+        FROM
+          `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.asthma_resolved`)
+      GROUP BY
+        code) c
+    ON 
+      b.snomedcode = c.code
+    WHERE 
+      b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+  )
+  SELECT
+    person_id,
+    ctv3text,
+    tbl_srcode_start_date
+  FROM
+    FilteredData
+  WHERE
+    rn = 1
+)
+
+-- Final query
+SELECT
+  j.person_id,
+  j.ctv3text
+FROM
+  JoinedData j
+LEFT JOIN
+  AsthmaResolved ar
+ON
+  j.person_id = ar.person_id
+WHERE
+  j.rn = 1
+  AND (ar.person_id IS NULL OR j.tbl_srcode_start_date > ar.tbl_srcode_start_date)
+
+
+****
+
+#Atrial fibrillation
+#Atrial fibrillation resolved x2
+-- Codelists: Atrial fibrillation - Clinical finding / Atrial fibrillation codes / Atrial fibrillation or flutter /History of atrial fibrillation or flutter /  
+
+WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.tbl_srcode_start_date,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+),
+
+AFResolved AS (
+  WITH FilteredData AS (
+    SELECT
+      a.person_id,
+      b.ctv3text,
+      b.tbl_srcode_start_date,
+      ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+    FROM
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+    JOIN 
+      `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+    ON 
+      a.person_id = b.person_id
+    JOIN 
+      (SELECT
+        code,
+        ANY_VALUE(term) AS term
+      FROM
+        (SELECT 
+          CAST(code AS STRING) AS code, 
+          term
+        FROM
+          `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_resolved_codes`
+        UNION ALL
+        SELECT
+          CAST(a.SCT_CONCEPTID AS STRING) AS code,
+          b.string_field_1 AS term
+        FROM
+          `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+        JOIN
+          `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_resolved_ctv3_codes` b
+        ON
+          b.string_field_0 = a.CTV3_CONCEPTID)
+      GROUP BY
+        code) c
+    ON 
+      b.snomedcode = c.code
+    WHERE 
+      b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+  )
+  SELECT
+    person_id,
+    ctv3text,
+    tbl_srcode_start_date
+  FROM
+    FilteredData
+  WHERE
+    rn = 1
+)
+
+-- Final query
+SELECT
+  j.person_id,
+  j.ctv3text
+FROM
+  JoinedData j
+LEFT JOIN
+  AFResolved ar
+ON
+  j.person_id = ar.person_id
+WHERE
+  j.rn = 1
+  AND (ar.person_id IS NULL OR j.tbl_srcode_start_date > ar.tbl_srcode_start_date)
+
+
+***
+#COPD
+-- Codelists: Chronic obstructive pulmonary disease (COPD) codes / Chronic obstructive pulmonary disease (COPD), emphysema, and associated lung diseases codes / Current COPD / has_copd
+
+-- Resolved; codelists: Chronic obstructive pulmonary disease (COPD) codes 
+
+
+WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.copd_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.copd_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.tbl_srcode_start_date,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+),
+
+CopdResolved AS (
+  WITH FilteredData AS (
+    SELECT
+      a.person_id,
+      b.ctv3text,
+      b.tbl_srcode_start_date,
+      ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+    FROM
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+    JOIN 
+      `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+    ON 
+      a.person_id = b.person_id
+    JOIN 
+      (SELECT
+        code,
+        ANY_VALUE(term) AS term
+      FROM
+        (SELECT 
+          CAST(code AS STRING) AS code, 
+          term
+        FROM
+          `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.copd_resolved_codes`)
+      GROUP BY
+        code) c
+    ON 
+      b.snomedcode = c.code
+    WHERE 
+      b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+  )
+  SELECT
+    person_id,
+    ctv3text,
+    tbl_srcode_start_date
+  FROM
+    FilteredData
+  WHERE
+    rn = 1
+)
+
+-- Final query
+SELECT
+  j.person_id,
+  j.ctv3text
+FROM
+  JoinedData j
+LEFT JOIN
+  CopdResolved ar
+ON
+  j.person_id = ar.person_id
+WHERE
+  j.rn = 1
+  AND (ar.person_id IS NULL OR j.tbl_srcode_start_date > ar.tbl_srcode_start_date)
+
+
+*** 
+#Dementia
+-- Codelists: Any Dementia (SNOMED-CT) V1.3 / Any Dementia (SNOMED-CT) V1.4 / Codes for dementia / Dementia / Dementia (Complete) / Dementia (SNOMED)/ Lewy body (Dementia) (SNOMED) V1 / Other dementias (SNOMED-CT) V1.4 / Other dementias (SNOMED-CT) V1.5 / Unspecified dementia (SNOMED-CT) V1.3 / Vascular dementia (SNOMED-CT) V1.3 / has_dementia
+
+WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.dementia_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.dementia_codes`
+),
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  JoinedData
+WHERE
+  rn = 1;
+
+***
+
+#Mental health disorder
+-- Codeslits: Anxiety Disorders / Depression and Anxiety (diagnoses and symptoms, excluding specific anxieties) / Depression and Generalised Anxiety Disorder (diagnoses and symptoms) / historic anxiety and depression diagnosis codes / Depression / Depression diagnosis codes / Psychosis and schizophrenia and bipolar affective disease codes / Psychosis, schizophrenia + bipolar affective disease / Serious mental illness (schizophrenia, bipolar disorder, psychosis) / Mental and behavioural disorders / Severe Mental Illness codes x2 / has_severe_mental_illness / 
+-- Resolved codelists: historic serious mental illness diagnosis codes / depression resolved / Codes for in remission from serious mental illness / Remission codes relating to Severe Mental Illness x2 / 
+
+
+
+WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.mhillness_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.mhillness_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.tbl_srcode_start_date,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+),
+
+AsthmaResolved AS (
+  WITH FilteredData AS (
+    SELECT
+      a.person_id,
+      b.ctv3text,
+      b.tbl_srcode_start_date,
+      ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+    FROM
+  yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+    JOIN 
+      `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+    ON 
+      a.person_id = b.person_id
+    JOIN 
+      (SELECT
+        code,
+        ANY_VALUE(term) AS term
+      FROM
+        (SELECT 
+          CAST(code AS STRING) AS code, 
+          term
+        FROM
+          `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.mhillness_resolved`)
+      GROUP BY
+        code) c
+    ON 
+      b.snomedcode = c.code
+    WHERE 
+      b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+  )
+ SELECT
+    person_id,
+    ctv3text,
+    tbl_srcode_start_date
+  FROM
+    FilteredData
+  WHERE
+    rn = 1
+)
+
+-- Final query
+SELECT
+  j.person_id,
+  j.ctv3text
+FROM
+  JoinedData j
+LEFT JOIN
+  AsthmaResolved ar
+ON
+  j.person_id = ar.person_id
+WHERE
+  j.rn = 1
+  AND (ar.person_id IS NULL OR j.tbl_srcode_start_date > ar.tbl_srcode_start_date)
+
+
+
+***
+#Learning disability
+-- Codelists: Intellectual disability / Intellectual disability including Downs Syndrome / Learning disabilities / Learning disability (LD) codes / Wider Learning Disability x2 / severe and profound learning disability flags
+
+WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ld_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ld_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+   a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  JoinedData
+WHERE
+  rn = 1;
+
+
+***
+#Osteoporosis 
+-- Codelists: Osteoporosis codes / Fragility fracture codes
+
+WITH FilteredData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids  a
+  JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+
+  (SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    (SELECT 
+  CAST(code AS STRING) AS code, 
+  term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.osteoporosis_codes`)
+  GROUP BY
+    code) c
+  ON 
+ b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis  -- Replace with the actual column names
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  FilteredData
+WHERE
+  rn = 1;
+
+***
+#RA/SLE/Psoriasis
+--Codelists: Rheumatoid Arthritis / Rheumatoid arthritis and associated disorders / has_rheumatoid_arth_or_sle / Adult and child psoriasis codes / Psoriasis / RA SLE  Psoriasis (SNOMED) / Systemic Lupus Erythematosus (SLE) / Adult rheumatoid arthritis codes / RA  SLE  Psoriasis
+
+
+
+WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.rheum_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+-- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.rheum_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+   a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  JoinedData
+WHERE
+  rn = 1;
+
+***
+
+#Cancer
+--Codelists: Cancer excluding lung and haematological / Haematological Cancer / Haematological Cancer (SNOMED) / Haematological cancer codes / Cancer excluding lung and haematological (SNOMED) / Haematological malignancies (SNOMED) / Lung Cancer / Lung Cancer (SNOMED) / Non-haematological cancer diagnosis codes with or without associated treatment / colorectal cancer ctv3 / colorectal cancer snomed / has_blood_bone_cancer / has_lung_or_oral_cancer
+
+WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.cancer_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.cancer_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date BETWEEN DATE_SUB(a.GCAPMR_date_of_diagnosis, INTERVAL 5 YEAR) AND a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text
+FROM
+  JoinedData
+WHERE
+  rn = 1
+
+
+***
+#Smoking - if code from  clear available within last 5 years before PMR/GCA diagnosis, used that; if not then used code from smoking unclear; if that not available then 'missing'
+--codelists: National diabetes audit (NDA) smoking habit codes / Smoking - Clear (SNOMED) / Smoking - Clear / Smoking habit codes / Codes indicating the patient has chosen not to give their smoking status 
+-- unclear codelists: Smoking - Unclear / Support and refer stop smoking service and advisor codes / Smoking - Unclear (SNOMED) / Smoking Intervention and Advice
+
+
+
+
+
+SELECT COUNT (person_id), smoking_status
+
+FROM 
+(WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.smoking_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.smoking_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+),
+
+SmokingStatusUnclear AS (
+  -- CTE for smoking status unclear
+ SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.unclear_smoking_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.unclear_smoking_codes`
+),
+
+FinalSmokingStatus AS (
+  SELECT
+    a.person_id,
+    CASE
+      WHEN MAX(b.tbl_srcode_start_date) >= DATE_SUB(a.GCAPMR_date_of_diagnosis, INTERVAL 5 YEAR) THEN 
+        MAX(b.ctv3text)
+      WHEN EXISTS (
+        SELECT 1
+        FROM `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` pc
+        JOIN SmokingStatusUnclear ss
+        ON pc.snomedcode = ss.code
+        WHERE pc.person_id = a.person_id
+        AND pc.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+      ) THEN 
+        (SELECT MAX(ss.term)
+         FROM `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` pc
+         JOIN SmokingStatusUnclear ss
+         ON pc.snomedcode = ss.code
+         WHERE pc.person_id = a.person_id
+         AND pc.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+        )
+      ELSE 'missing'
+    END AS smoking_status
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  LEFT JOIN
+    JoinedData b
+  ON
+    a.person_id = b.person_id
+  GROUP BY
+    a.person_id, a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id and smoking status
+SELECT
+  person_id,
+  smoking_status
+FROM
+  FinalSmokingStatus)
+
+GROUP BY smoking_status
+
+***
+#QRISK
+-- Codelists: CVD risk assessment score QOF/ Cardiovascular disease (CVD) risk assessment codes greater than 20 per cent / Cardiovascular disease (CVD) risk assessment done / 
+-- Unsuitable for QRISK: Codes indicating cardiovascular disease (CVD) risk assessment was deemed unsuitable for the patient
