@@ -1,0 +1,152 @@
+#Extra coded QRISK values
+
+SELECT 
+person_id, 
+ctv3text,
+CASE
+    WHEN ctv3text = 'JBS cardiovascular disease risk >20% up to 30% ov' THEN '30'
+    WHEN ctv3text = 'JBS cardiovascular disease risk 10-20% over next 10 years 15' THEN '15'
+    ELSE CAST(QRISK AS STRING)
+END AS QRISK
+
+FROM 
+(
+#Extra coded QRISK values
+
+
+WITH RankedValues AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON 
+    a.person_id = b.person_id
+  LEFT JOIN 
+    (SELECT
+       code,
+       ANY_VALUE(term) AS term
+     FROM
+       (SELECT 
+          CAST(code AS STRING) AS code, 
+          term
+        FROM
+          `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.QRISK_codes`)
+     GROUP BY
+       code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+    AND (
+      c.code IS NOT NULL OR
+      LOWER(b.ctv3text) LIKE '%qrisk%' OR
+      LOWER(b.ctv3text) LIKE '%framingham%' OR
+      LOWER(b.ctv3text) LIKE '%cardiovascular disease 10 year risk%' OR
+      LOWER(b.ctv3text) LIKE '%cardiovascular disease risk%' OR
+      LOWER(b.ctv3text) LIKE '%risk of cardiovascular disease%' OR
+      LOWER(b.ctv3text) LIKE '%joint british societies%' OR
+      LOWER(b.ctv3text) LIKE '%jbs%'
+
+      
+
+    )
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  numericvalue as QRISK
+FROM
+  RankedValues
+WHERE
+  rn = 1
+AND
+ person_id NOT IN 
+
+(SELECT person_ID FROM
+(SELECT
+  a.person_id,
+  l.gender,
+  a.Age_GCAPMR_Diagnosis as age,
+  g.atrial_fibrillation,
+  j.atypical_antipsycotics as atypical_antipsy,
+  k.steroid_tablets as regular_steroid_tablets,
+  n.erectile_disfunction,
+  o.migraines as migraine,
+  e.rheumatoid_arthritis,
+  f.chronic_kidney_disease,
+  h.severe_mental_illness,
+  i.systemic_lupus_erythematosus,
+  q.blood_pressure_treatment,
+  d.diabetes1,
+  m.diabetes2,
+  p.weight,
+  p.height,
+  b.ethnicity,
+  r.heart_attack_relative,
+  s.tc_hdl_ratio as cholesterol_HDL_ratio,
+  t.closest_systolic as systolic_blood_pressure, 
+  u.st_dev_systolic as std_systolic_blood_pressure,
+  v.TDS as townsend,
+  c.smoking_status as smoke
+
+FROM
+  yhcr-prd-phm-bia-core.CB_1745.PMR_GCA_Cohort a
+
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ethnicity_QRISK b ON a.person_id = b.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.smoking_status_QRISK c ON a.person_id = c.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.diabetes1_QRISK d ON a.person_id = d.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ra_QRISK e ON a.person_id = e.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ckd_QRISK f ON a.person_id = f.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_QRISK g ON a.person_id = g.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.severe_mental_illness_QRISK h ON a.person_id = h.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.sle_QRISK i ON a.person_id = i.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.atypical_antipsycotics_QRISK j ON a.person_id = j.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_tablets_QRISK k ON a.person_id = k.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.gender_QRISK l ON a.person_id = l.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.diabetes2_QRISK m ON a.person_id = m.person_id
+INNER JOIN 
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ed_QRISK n ON a.person_id = n.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.migraines_QRISK o ON a.person_id = o.person_id
+INNER JOIN 
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_accurr_3 p ON a.person_id = p.person_id
+INNER JOIN 
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.blood_pressure_treatment_QRISK q ON a.person_id = q.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.fam_hx_mi_QRISK r ON a.person_id = r.person_id
+INNER JOIN
+ yhcr-prd-phm-bia-core.CB_MYSPACE_KF.tc_hdl_ratio_QRISK s ON a.person_id = s.person_id
+INNER JOIN
+ yhcr-prd-phm-bia-core.CB_1745.For_Kat_GCAPMR_Closest_BP t ON a.person_id = t.person_id
+INNER JOIN
+yhcr-prd-phm-bia-core.CB_1745.For_Kat_GCAPMR_BPSTDEV u ON a.person_id = u.person_id
+INNER JOIN 
+yhcr-prd-phm-bia-core.CB_MYSPACE_KF.townsend_QRISK v ON a.person_id = v.person_id
+
+
+)) )
+
+
+
+#Cardiovascular disease risk assessment first lette
+#QRISK cardiovascular disease 10 year risk score
+#QRISK2 10 Year Risk Score Review - No change in tr
