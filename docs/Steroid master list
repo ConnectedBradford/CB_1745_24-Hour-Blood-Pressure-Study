@@ -1,0 +1,118 @@
+#1
+SELECT
+c.person_id,
+c.ctv3text as diagnosis,
+c.diagnosis_date,
+c.age_at_diagnosis,
+d.DMplusD_ProductDescription as name_of_medication,
+d.medicationdosage,
+d.medicationquantity,
+d.datemedicationstart,
+d.datemedicationend,
+d.tbl_srprimarycaremedication_start_date as prescription_date,
+d.tbl_srprimarycaremedication_end_date,
+d.rowidentifier,
+d.dateeventrecorded,
+d.dateevent,
+d.iddoneby,
+d.idorganisationdoneat,
+d.nameofmedication,
+d.issupervised,
+d.superviseddose,
+d.unsuperviseddose,
+d.isrepeatmedication,
+d.isothermedication,
+d.isdentalmedication,
+d.ishospitalmedication,
+d.idorganisation,
+d.idorganisationregisteredat
+
+FROM 
+`yhcr-prd-phm-bia-core.CB_1745.diagnosis_age` c,
+
+(SELECT 
+a.code, 
+a.term, 
+a.SNOMED_Code, 
+a.DMplusD_ProductDescription,
+
+b.person_id,
+b.tbl_srprimarycaremedication_start_date,
+b.tbl_srprimarycaremedication_end_date,
+b.rowidentifier,
+b.dateeventrecorded,
+b.dateevent,
+b.iddoneby,
+b.idorganisationdoneat,
+b.nameofmedication,
+b.datemedicationstart,
+b.datemedicationend,
+b.medicationdosage,
+b.medicationquantity,
+b.issupervised,
+b.superviseddose,
+b.unsuperviseddose,
+b.isrepeatmedication,
+b.isothermedication,
+b.isdentalmedication,
+b.ishospitalmedication,
+b.idorganisation,
+b.idorganisationregisteredat
+
+FROM 
+`yhcr-prd-phm-bia-core.CB_MYSPACE_KF.Final steroid codelist` a,
+`yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare_V8.tbl_srprimarycaremedication` b
+
+WHERE a.DMplusD_ProductDescription=b.nameofmedication) d
+
+WHERE 
+c.person_id = d.person_id
+
+#2 Converted diagnosis_date from STRING to DATETIME
+
+CREATE OR REPLACE TABLE `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_master_list_v3_datetime` AS 
+SELECT 
+*,
+PARSE_DATE('%d-%m-%Y', diagnosis_date) as date_of_diagnosis
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_master_list_v3
+
+
+#3 Dropped diagnosis_date column 
+
+ALTER TABLE `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_master_list_v3_datetime` DROP COLUMN diagnosis_date;
+
+
+#4 Deduplicate
+-- SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_master_list_v3_datetime_deduped
+
+SELECT DISTINCT 
+person_id,
+diagnosis,
+date_of_diagnosis,
+age_at_diagnosis,
+name_of_medication,
+medicationdosage,
+medicationquantity,
+datemedicationstart,
+datemedicationend,
+prescription_date,
+tbl_srprimarycaremedication_end_date,
+rowidentifier,
+dateeventrecorded,
+dateevent,
+iddoneby,
+idorganisationdoneat,
+nameofmedication,
+issupervised,
+superviseddose,
+unsuperviseddose,
+isrepeatmedication,
+isothermedication,
+isdentalmedication,
+ishospitalmedication,
+idorganisation,
+idorganisationregisteredat
+
+FROM `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_master_list_v3_datetime`
+
+ORDER BY rowidentifier
