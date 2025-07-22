@@ -367,8 +367,6 @@ OR duration_in_days <= 0
 
 #8b - hand went through durations and calculated (1 - if possible calculated from medicationquantity/dosage; 2 - if not and number of days available used that; 3 - otherwise 0)
 
---Final_fixing_duration_in_days CSV file on desktop
-
 #8c - uploaded the new table to Big Query
 -- SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.hand_fixed_duration_in_days
 
@@ -555,8 +553,7 @@ AND duration_in_days > 0
 #9 - number of tablets a
 
 1. Selected all that would work with below
-(2. realised ordering was wrong - went through trying to fix as many as possible most will be ok. will need to disregard any with number of tablets 0)
-3. Selected ones that would not - 4052 records
+2. Selected ones that would not - 4052 records
 3. Went through by hand - 0 if cannot work out value (will need to exclude this later) ; excluded some outliers
 4. converted TIMESTAMP to DATETIME and got rid of number of tabs = 0 (outliers/incorrect info)
 
