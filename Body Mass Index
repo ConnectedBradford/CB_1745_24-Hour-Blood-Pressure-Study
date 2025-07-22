@@ -1,0 +1,2451 @@
+--STEP 1
+#Full BMI from weight/height - 4277
+
+#Full BMI from og data
+
+SELECT
+  person_id,
+  weight,
+  height,
+  weight /POW(height / 100, 2) AS bmi
+
+FROM 
+
+(SELECT 
+a.person_id,
+a.height,
+b.weight
+
+FROM 
+
+(#height
+SELECT person_id, height
+
+FROM 
+
+(SELECT
+  person_id,
+  CAST (ROUND(height * 100) as INT64) AS height
+
+FROM 
+(SELECT person_id, height
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.height_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as height,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  height NOT IN (-1, 0, 0.3357) ) )
+
+  WHERE height > 100) a,
+
+(#weight
+
+SELECT 
+person_id,
+ CAST (ROUND(weight) as INT64) as weight
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+      CAST(code AS STRING) AS code, 
+        term
+   FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.weight_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as weight,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  weight > 16
+) b
+
+WHERE a.person_id = b.person_id)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- STEP 2
+
+
+#Height, weight or neither - 532
+
+SELECT 
+person_id, weight, height
+
+FROM
+(#no weight or height data
+SELECT 
+person_id,
+NULL as weight,
+NULL as height
+FROM yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids
+
+WHERE person_id NOT IN 
+
+(SELECT person_id
+
+FROM (#Weight only
+
+SELECT person_id, weight, NULL as height
+
+FROM (#weight
+
+SELECT 
+person_id,
+ CAST (ROUND(weight) as INT64) as weight
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+      CAST(code AS STRING) AS code, 
+        term
+   FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.weight_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as weight,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  weight > 16)
+
+WHERE person_id NOT IN
+
+(SELECT person_id FROM 
+
+(#Full BMI from og data
+
+SELECT
+  person_id,
+  weight,
+  height,
+  weight /POW(height / 100, 2) AS bmi
+
+FROM 
+
+(SELECT 
+a.person_id,
+a.height,
+b.weight
+
+FROM 
+
+(#height
+SELECT person_id, height
+
+FROM 
+
+(SELECT
+  person_id,
+  CAST (ROUND(height * 100) as INT64) AS height
+
+FROM 
+(SELECT person_id, height
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.height_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as height,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  height NOT IN (-1, 0, 0.3357) ) )
+
+  WHERE height > 100) a,
+
+(#weight
+
+SELECT 
+person_id,
+ CAST (ROUND(weight) as INT64) as weight
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+      CAST(code AS STRING) AS code, 
+        term
+   FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.weight_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as weight,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  weight > 16
+) b
+
+WHERE a.person_id = b.person_id))))
+
+
+
+
+
+
+UNION ALL
+
+SELECT person_id
+
+FROM (#Height only
+
+SELECT person_id, height, NULL as weight
+
+FROM (#height
+SELECT person_id, height
+
+FROM 
+
+(SELECT
+  person_id,
+  CAST (ROUND(height * 100) as INT64) AS height
+
+FROM 
+(SELECT person_id, height
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.height_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as height,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  height NOT IN (-1, 0, 0.3357) ) )
+
+  WHERE height > 100)
+
+WHERE person_id NOT IN
+
+(SELECT person_id FROM 
+
+(#Full BMI from og data
+
+SELECT
+  person_id,
+  weight,
+  height,
+  weight /POW(height / 100, 2) AS bmi
+
+FROM 
+
+(SELECT 
+a.person_id,
+a.height,
+b.weight
+
+FROM 
+
+(#height
+SELECT person_id, height
+
+FROM 
+
+(SELECT
+  person_id,
+  CAST (ROUND(height * 100) as INT64) AS height
+
+FROM 
+(SELECT person_id, height
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.height_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as height,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  height NOT IN (-1, 0, 0.3357) ) )
+
+  WHERE height > 100) a,
+
+(#weight
+
+SELECT 
+person_id,
+ CAST (ROUND(weight) as INT64) as weight
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+      CAST(code AS STRING) AS code, 
+        term
+   FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.weight_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as weight,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  weight > 16
+) b
+
+WHERE a.person_id = b.person_id))))
+
+
+
+
+
+UNION ALL
+
+SELECT person_id
+
+FROM (#Full BMI from og data
+
+SELECT
+  person_id,
+  weight,
+  height,
+  weight /POW(height / 100, 2) AS bmi
+
+FROM 
+
+(SELECT 
+a.person_id,
+a.height,
+b.weight
+
+FROM 
+
+(#height
+SELECT person_id, height
+
+FROM 
+
+(SELECT
+  person_id,
+  CAST (ROUND(height * 100) as INT64) AS height
+
+FROM 
+(SELECT person_id, height
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.height_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as height,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  height NOT IN (-1, 0, 0.3357) ) )
+
+  WHERE height > 100) a,
+
+(#weight
+
+SELECT 
+person_id,
+ CAST (ROUND(weight) as INT64) as weight
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+      CAST(code AS STRING) AS code, 
+        term
+   FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.weight_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as weight,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  weight > 16
+) b
+
+WHERE a.person_id = b.person_id))
+
+
+) )
+
+
+UNION ALL
+
+SELECT 
+
+person_id, weight, height
+
+FROM (#Weight only
+
+SELECT person_id, weight, NULL as height
+
+FROM (#weight
+
+SELECT 
+person_id,
+ CAST (ROUND(weight) as INT64) as weight
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+      CAST(code AS STRING) AS code, 
+        term
+   FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.weight_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as weight,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  weight > 16)
+
+WHERE person_id NOT IN
+
+(SELECT person_id FROM 
+
+(#Full BMI from og data
+
+SELECT
+  person_id,
+  weight,
+  height,
+  weight /POW(height / 100, 2) AS bmi
+
+FROM 
+
+(SELECT 
+a.person_id,
+a.height,
+b.weight
+
+FROM 
+
+(#height
+SELECT person_id, height
+
+FROM 
+
+(SELECT
+  person_id,
+  CAST (ROUND(height * 100) as INT64) AS height
+
+FROM 
+(SELECT person_id, height
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.height_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as height,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  height NOT IN (-1, 0, 0.3357) ) )
+
+  WHERE height > 100) a,
+
+(#weight
+
+SELECT 
+person_id,
+ CAST (ROUND(weight) as INT64) as weight
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+      CAST(code AS STRING) AS code, 
+        term
+   FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.weight_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as weight,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  weight > 16
+) b
+
+WHERE a.person_id = b.person_id))))
+
+
+
+
+UNION ALL
+
+SELECT 
+
+person_id, weight, height
+
+FROM (#Height only
+
+SELECT person_id, height, NULL as weight
+
+FROM (#height
+SELECT person_id, height
+
+FROM 
+
+(SELECT
+  person_id,
+  CAST (ROUND(height * 100) as INT64) AS height
+
+FROM 
+(SELECT person_id, height
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.height_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as height,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  height NOT IN (-1, 0, 0.3357) ) )
+
+  WHERE height > 100)
+
+WHERE person_id NOT IN
+
+(SELECT person_id FROM 
+
+(#Full BMI from og data
+
+SELECT
+  person_id,
+  weight,
+  height,
+  weight /POW(height / 100, 2) AS bmi
+
+FROM 
+
+(SELECT 
+a.person_id,
+a.height,
+b.weight
+
+FROM 
+
+(#height
+SELECT person_id, height
+
+FROM 
+
+(SELECT
+  person_id,
+  CAST (ROUND(height * 100) as INT64) AS height
+
+FROM 
+(SELECT person_id, height
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.height_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as height,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  height NOT IN (-1, 0, 0.3357) ) )
+
+  WHERE height > 100) a,
+
+(#weight
+
+SELECT 
+person_id,
+ CAST (ROUND(weight) as INT64) as weight
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+      CAST(code AS STRING) AS code, 
+        term
+   FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.weight_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as weight,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  weight > 16
+) b
+
+WHERE a.person_id = b.person_id))))
+
+
+
+
+
+
+
+-- STEP 3: height or weight from coded bmi - 31
+
+
+WITH bmi_data AS (
+  SELECT 
+    a.person_id,
+    CAST(b.numericvalue AS FLOAT64) AS bmi
+  FROM
+    (SELECT 
+      a.*,
+      b.GCAPMR_date_of_diagnosis
+    FROM
+      yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither a
+    JOIN
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b
+    ON a.person_id = b.person_id) a
+  JOIN 
+    yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_codes)
+    GROUP BY
+      code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis 
+    AND CAST(b.numericvalue AS FLOAT64) > 18
+),
+
+bmi_stats AS (
+  SELECT 
+    person_id,
+    COUNT(*) AS row_count,
+    COUNT(DISTINCT bmi) AS distinct_bmi_count,
+    AVG(bmi) AS avg_bmi
+  FROM bmi_data
+  GROUP BY person_id
+),
+
+bmi_table AS (
+  SELECT 
+    bs.person_id,
+    CASE
+      WHEN bs.row_count > 1 AND bs.distinct_bmi_count = 1 THEN bs.avg_bmi
+      ELSE bd.bmi
+    END AS bmi
+  FROM bmi_stats bs
+  LEFT JOIN bmi_data bd ON bs.person_id = bd.person_id
+  WHERE 
+    (bs.row_count = 1) OR 
+    (bs.row_count > 1 AND bs.distinct_bmi_count = 1) OR
+    (bs.row_count > 1 AND bs.distinct_bmi_count > 1 AND bd.bmi = bs.avg_bmi)
+),
+
+height_weight_table AS (
+  SELECT DISTINCT
+    person_id,
+    AVG(height) AS avg_height,
+    AVG(weight) AS avg_weight
+  FROM 
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither`
+  GROUP BY 
+    person_id
+),
+
+calculated_values AS (
+  SELECT 
+    hw.person_id,
+    b.bmi,
+    CASE
+      WHEN hw.avg_height IS NULL AND hw.avg_weight IS NOT NULL THEN 
+        ROUND(SQRT(hw.avg_weight / b.bmi) * 100, 1)  -- Calculate height in cm
+      ELSE hw.avg_height
+    END AS calculated_height,
+    CASE
+      WHEN hw.avg_weight IS NULL AND hw.avg_height IS NOT NULL THEN 
+        ROUND(b.bmi * POW(hw.avg_height / 100, 2), 1)  -- Calculate weight in kg
+      ELSE hw.avg_weight
+    END AS calculated_weight
+  FROM height_weight_table hw
+  JOIN bmi_table b ON hw.person_id = b.person_id
+)
+
+SELECT DISTINCT person_id, bmi, calculated_height AS height, calculated_weight AS weight
+FROM calculated_values
+WHERE calculated_weight IS NOT NULL
+
+
+
+
+
+-- STEP 4: BMI (and then weight/height whichever one is missing) approximated from ctv3text 57
+
+SELECT *
+FROM 
+
+(WITH bmi_data AS (
+  SELECT 
+    a.person_id,
+    a.bmi,
+    b.height,
+    b.weight,
+  FROM
+    (WITH ranked_rows AS (
+      SELECT 
+        person_id,
+        ctv3text,
+        bmi,
+        ROW_NUMBER() OVER (
+          PARTITION BY person_id
+          ORDER BY 
+            CASE WHEN bmi IS NOT NULL THEN 0 ELSE 1 END,  -- Prioritize non-null BMI
+            bmi DESC  -- If multiple non-null BMIs, take the highest
+        ) AS row_num
+      FROM (
+        SELECT DISTINCT
+          person_id,
+          ctv3text,
+          CASE
+            WHEN ctv3text = 'Body mass index index 25-29 - overweight' THEN 27
+            WHEN ctv3text = 'Obesity' THEN 34.95
+            WHEN ctv3text = 'Body mass index high K/M2' THEN 34.95
+            WHEN ctv3text = 'Body mass index low K/M2' THEN 18
+            WHEN ctv3text = 'Body mass index 30+ - obesity' THEN 34.95
+            WHEN ctv3text = 'O/E - obese' THEN 34.95
+            WHEN ctv3text = 'Body mass index normal K/M2' THEN 21.7
+            WHEN ctv3text = 'Body mass index - observation' THEN NULL
+            ELSE bmi
+          END AS bmi
+        FROM (
+          SELECT 
+            a.person_id,
+            b.ctv3text,
+            CAST(b.numericvalue AS FLOAT64) AS bmi
+          FROM
+            (SELECT 
+              a.*,
+              b.GCAPMR_date_of_diagnosis
+            FROM
+              yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither a
+            JOIN
+              yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b
+            ON a.person_id = b.person_id) a
+          JOIN 
+            yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode b
+          ON 
+            a.person_id = b.person_id
+          JOIN 
+            (SELECT
+              code,
+              ANY_VALUE(term) AS term
+            FROM
+              (SELECT 
+                CAST(code AS STRING) AS code, 
+                term
+              FROM
+                yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_codes)
+            GROUP BY
+              code) c
+          ON 
+            b.snomedcode = c.code
+          WHERE 
+            b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+        )
+        WHERE bmi < 80  -- Adjusted upper limit for more realistic BMI values
+      )
+    )
+    SELECT 
+      person_id,
+      bmi
+    FROM ranked_rows
+    WHERE row_num = 1 AND bmi IS NOT NULL) a
+  JOIN
+    yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither b
+  ON a.person_id = b.person_id
+)
+
+SELECT 
+  person_id,
+  bmi,
+  CASE
+    WHEN height IS NOT NULL THEN height
+    WHEN weight IS NOT NULL THEN ROUND(SQRT(weight / bmi) * 100, 1)
+    ELSE NULL
+  END AS height,
+  CASE
+    WHEN weight IS NOT NULL THEN weight
+    WHEN height IS NOT NULL THEN ROUND(bmi * POW(height / 100, 2), 1)
+    ELSE NULL
+  END AS weight
+FROM bmi_data
+WHERE bmi IS NOT NULL )
+
+WHERE weight IS NOT NULL
+
+
+
+
+
+
+
+
+
+
+-- STEP 5: Where height/weight not available, but bmi available, worked out height and weight from uk averages
+
+SELECT
+  person_id,
+  gender,
+  CASE 
+    WHEN gender = 'M' THEN 175
+    WHEN gender = 'F' THEN 162
+    ELSE NULL
+  END AS height,
+  CASE
+    WHEN gender = 'M' THEN
+      CASE
+        WHEN bmi = 39.5 THEN 120.97
+        WHEN bmi = 24.3 THEN 74.42
+        WHEN bmi = 24.8 THEN 75.95
+        WHEN bmi = 21.7 THEN 66.46
+        WHEN bmi = 30 THEN 91.88
+        WHEN bmi = 28.34 THEN 86.79
+        WHEN bmi = 29.20 THEN 89.43
+        WHEN bmi = 34.95 THEN 107.03
+        WHEN bmi = 34.606666666666669 THEN 105.98
+        WHEN bmi = 22.3 THEN 68.29
+        WHEN bmi = 30.51 THEN 93.44
+        WHEN bmi = 25.4 THEN 77.79
+        WHEN bmi = 27 THEN 82.69
+        WHEN bmi = 24.9 THEN 76.26
+        WHEN bmi = 24.75 THEN 75.80
+        WHEN bmi = 28 THEN 85.75
+        WHEN bmi = 23.8 THEN 72.89
+        WHEN bmi = 35.72877 THEN 109.42
+        WHEN bmi = 26.395 THEN 80.83
+        WHEN bmi = 23 THEN 70.44
+        ELSE NULL
+      END
+    WHEN gender = 'F' THEN
+      CASE
+        WHEN bmi = 39.50 THEN 103.67
+        WHEN bmi = 24.30 THEN 63.77
+        WHEN bmi = 24.80 THEN 65.10
+        WHEN bmi = 21.70 THEN 56.95
+        WHEN bmi = 30.00 THEN 78.73
+        WHEN bmi = 28.34 THEN 74.37
+        WHEN bmi = 29.20 THEN 76.65
+        WHEN bmi = 34.95 THEN 91.73
+        WHEN bmi = 34.606666666666669 THEN 90.83
+        WHEN bmi = 22.30 THEN 58.52
+        WHEN bmi = 30.51 THEN 80.07
+        WHEN bmi = 25.40 THEN 66.67
+        WHEN bmi = 27.00 THEN 70.86
+        WHEN bmi = 24.90 THEN 65.36
+        WHEN bmi = 24.75 THEN 64.97
+        WHEN bmi = 28.00 THEN 73.47
+        WHEN bmi = 23.80 THEN 62.47
+        WHEN bmi = 35.72877 THEN 93.78
+        WHEN bmi = 26.395 THEN 69.27
+        WHEN bmi = 23.00 THEN 60.35
+        ELSE NULL
+      END
+    ELSE NULL
+  END AS weight,
+  bmi
+FROM (SELECT 
+a.person_id,
+a.height, 
+a.weight,
+b.bmi,
+c.gender
+
+FROM 
+yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither a,
+
+(#combined BMI from coded search
+
+SELECT person_id, bmi
+
+FROM 
+(#Deduplicated bmi approximations from ctv3text
+
+WITH ranked_rows AS (
+  SELECT 
+    person_id,
+    ctv3text,
+    bmi,
+    ROW_NUMBER() OVER (
+      PARTITION BY person_id
+      ORDER BY 
+        CASE WHEN bmi IS NOT NULL THEN 0 ELSE 1 END,  -- Prioritize non-null BMI
+        bmi DESC  -- If multiple non-null BMIs, take the highest
+    ) AS row_num
+  FROM (SELECT DISTINCT
+  person_id,
+  ctv3text,
+  CASE
+    WHEN ctv3text = 'Body mass index index 25-29 - overweight' THEN 27
+    WHEN ctv3text = 'Obesity' THEN 34.95
+    WHEN ctv3text = 'Body mass index high K/M2' THEN 34.95
+    WHEN ctv3text = 'Body mass index low K/M2' THEN 18
+    WHEN ctv3text = 'Body mass index 30+ - obesity' THEN 34.95
+    WHEN ctv3text = 'O/E - obese' THEN 34.95
+    WHEN ctv3text = 'Body mass index normal K/M2' THEN 21.7
+    WHEN ctv3text = 'Body mass index - observation' THEN NULL
+    ELSE bmi
+  END AS bmi
+
+FROM
+(SELECT 
+    a.person_id,
+    b.ctv3text,
+    CAST(b.numericvalue AS FLOAT64) AS bmi
+  FROM
+    (SELECT 
+      a.*,
+      b.GCAPMR_date_of_diagnosis
+    FROM
+      yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither a,
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b
+    WHERE a.person_id = b.person_id) a
+  JOIN 
+    yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_codes)
+    GROUP BY
+      code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis)
+
+WHERE bmi < 18)
+
+
+
+)
+SELECT 
+  person_id,
+  bmi
+FROM ranked_rows
+WHERE row_num = 1 AND bmi IS NOT NULL)
+
+UNION ALL
+
+SELECT 
+person_id, bmi
+
+FROM 
+
+( #Deduplicated bmi numeric values
+
+ 
+ SELECT 
+    person_id,
+    #COUNT(*) AS row_count,
+    #COUNT(DISTINCT bmi) AS distinct_bmi_count,
+    AVG(bmi) AS bmi
+  FROM 
+  
+  (SELECT 
+    a.person_id,
+    CAST(b.numericvalue AS FLOAT64) AS bmi
+  FROM
+    (SELECT 
+      a.*,
+      b.GCAPMR_date_of_diagnosis
+    FROM
+      yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither a
+    JOIN
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b
+    ON a.person_id = b.person_id) a
+  JOIN 
+    yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code,
+ term
+      FROM
+        yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_codes)
+    GROUP BY
+      code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis 
+    AND CAST(b.numericvalue AS FLOAT64) > 18 )
+
+    GROUP BY person_id)) b,
+  
+  (SELECT  DISTINCT
+      b.person_id,
+      b.gender
+    FROM yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srpatient b,
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+      WHERE a.person_id = b.person_id) c
+
+WHERE a.height IS NULL AND a.weight IS NULL
+AND a.person_id = b.person_id
+AND a.person_id = c.person_id )
+
+
+#WHERE bmi IS NOT NULL AND gender IN ('M', 'F');
+
+
+
+
+
+
+
+
+-- STEP 6: UNION ALL above - 4385
+-- SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_accur
+
+
+SELECT 
+person_id, height, weight, bmi
+
+FROM 
+
+(SELECT
+  person_id,
+  weight,
+  height,
+  weight /POW(height / 100, 2) AS bmi
+
+FROM 
+
+(SELECT 
+a.person_id,
+a.height,
+b.weight
+
+FROM 
+
+(#height
+SELECT person_id, height
+
+FROM 
+
+(SELECT
+  person_id,
+  CAST (ROUND(height * 100) as INT64) AS height
+
+FROM 
+(SELECT person_id, height
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.height_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as height,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  height NOT IN (-1, 0, 0.3357) ) )
+
+  WHERE height > 100) a,
+
+(#weight
+
+SELECT 
+person_id,
+ CAST (ROUND(weight) as INT64) as weight
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+      CAST(code AS STRING) AS code, 
+        term
+   FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.weight_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as weight,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  weight > 16
+) b
+
+WHERE a.person_id = b.person_id)
+)
+
+UNION ALL
+
+
+
+
+
+
+SELECT 
+person_id, height, weight, bmi
+
+FROM 
+
+(WITH bmi_data AS (
+  SELECT 
+    a.person_id,
+    CAST(b.numericvalue AS FLOAT64) AS bmi
+  FROM
+    (SELECT 
+      a.*,
+      b.GCAPMR_date_of_diagnosis
+    FROM
+      yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither a
+    JOIN
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b
+    ON a.person_id = b.person_id) a
+  JOIN 
+    yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+FROM
+        yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_codes)
+    GROUP BY
+      code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis 
+    AND CAST(b.numericvalue AS FLOAT64) > 18
+),
+
+bmi_stats AS (
+  SELECT 
+    person_id,
+    COUNT(*) AS row_count,
+    COUNT(DISTINCT bmi) AS distinct_bmi_count,
+    AVG(bmi) AS avg_bmi
+  FROM bmi_data
+  GROUP BY person_id
+),
+
+bmi_table AS (
+  SELECT 
+    bs.person_id,
+    CASE
+      WHEN bs.row_count > 1 AND bs.distinct_bmi_count = 1 THEN bs.avg_bmi
+      ELSE bd.bmi
+    END AS bmi
+  FROM bmi_stats bs
+  LEFT JOIN bmi_data bd ON bs.person_id = bd.person_id
+  WHERE 
+    (bs.row_count = 1) OR 
+    (bs.row_count > 1 AND bs.distinct_bmi_count = 1) OR
+    (bs.row_count > 1 AND bs.distinct_bmi_count > 1 AND bd.bmi = bs.avg_bmi)
+),
+
+height_weight_table AS (
+  SELECT DISTINCT
+    person_id,
+    AVG(height) AS avg_height,
+    AVG(weight) AS avg_weight
+  FROM 
+`yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither`
+  GROUP BY 
+    person_id
+),
+
+calculated_values AS (
+  SELECT 
+    hw.person_id,
+    b.bmi,
+    CASE
+      WHEN hw.avg_height IS NULL AND hw.avg_weight IS NOT NULL THEN 
+        ROUND(SQRT(hw.avg_weight / b.bmi) * 100, 1)  -- Calculate height in cm
+      ELSE hw.avg_height
+    END AS calculated_height,
+    CASE
+      WHEN hw.avg_weight IS NULL AND hw.avg_height IS NOT NULL THEN 
+        ROUND(b.bmi * POW(hw.avg_height / 100, 2), 1)  -- Calculate weight in kg
+      ELSE hw.avg_weight
+    END AS calculated_weight
+  FROM height_weight_table hw
+  JOIN bmi_table b ON hw.person_id = b.person_id
+)
+
+SELECT DISTINCT person_id, bmi, calculated_height AS height, calculated_weight AS weight
+FROM calculated_values
+WHERE calculated_weight IS NOT NULL)
+
+UNION ALL
+
+
+
+
+
+
+
+SELECT 
+person_id, height, weight, bmi
+
+FROM 
+
+(SELECT *
+FROM 
+
+(WITH bmi_data AS (
+  SELECT 
+    a.person_id,
+    a.bmi,
+    b.height,
+    b.weight,
+  FROM
+    (WITH ranked_rows AS (
+      SELECT 
+        person_id,
+        ctv3text,
+        bmi,
+        ROW_NUMBER() OVER (
+          PARTITION BY person_id
+          ORDER BY 
+            CASE WHEN bmi IS NOT NULL THEN 0 ELSE 1 END,  -- Prioritize non-null BMI
+            bmi DESC  -- If multiple non-null BMIs, take the highest
+        ) AS row_num
+      FROM (
+        SELECT DISTINCT
+          person_id,
+          ctv3text,
+          CASE
+            WHEN ctv3text = 'Body mass index index 25-29 - overweight' THEN 27
+            WHEN ctv3text = 'Obesity' THEN 34.95
+            WHEN ctv3text = 'Body mass index high K/M2' THEN 34.95
+            WHEN ctv3text = 'Body mass index low K/M2' THEN 18
+            WHEN ctv3text = 'Body mass index 30+ - obesity' THEN 34.95
+            WHEN ctv3text = 'O/E - obese' THEN 34.95
+            WHEN ctv3text = 'Body mass index normal K/M2' THEN 21.7
+            WHEN ctv3text = 'Body mass index - observation' THEN NULL
+            ELSE bmi
+          END AS bmi
+        FROM (
+          SELECT 
+            a.person_id,
+            b.ctv3text,
+            CAST(b.numericvalue AS FLOAT64) AS bmi
+          FROM
+            (SELECT 
+              a.*,
+              b.GCAPMR_date_of_diagnosis
+            FROM
+              yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither a
+            JOIN
+              yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b
+            ON a.person_id = b.person_id) a
+          JOIN 
+            yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode b
+          ON 
+            a.person_id = b.person_id
+          JOIN 
+            (SELECT
+              code,
+              ANY_VALUE(term) AS term
+            FROM
+              (SELECT 
+                CAST(code AS STRING) AS code, 
+                term
+              FROM
+                yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_codes)
+            GROUP BY
+              code) c
+          ON 
+            b.snomedcode = c.code
+          WHERE 
+            b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+        )
+        WHERE bmi < 80  -- Adjusted upper limit for more realistic BMI values
+      )
+    )
+    SELECT 
+      person_id,
+      bmi
+    FROM ranked_rows
+    WHERE row_num = 1 AND bmi IS NOT NULL) a
+  JOIN
+    yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither b
+  ON a.person_id = b.person_id
+)
+
+SELECT 
+  person_id,
+  bmi,
+  CASE
+    WHEN height IS NOT NULL THEN height
+    WHEN weight IS NOT NULL THEN ROUND(SQRT(weight / bmi) * 100, 1)
+    ELSE NULL
+  END AS height,
+  CASE
+    WHEN weight IS NOT NULL THEN weight
+    WHEN height IS NOT NULL THEN ROUND(bmi * POW(height / 100, 2), 1)
+    ELSE NULL
+  END AS weight
+FROM bmi_data
+WHERE bmi IS NOT NULL )
+
+WHERE weight IS NOT NULL)
+
+UNION ALL
+
+
+
+
+
+
+SELECT 
+person_id, height, weight, bmi
+
+FROM 
+
+(SELECT
+  person_id,
+  gender,
+  CASE 
+    WHEN gender = 'M' THEN 175
+    WHEN gender = 'F' THEN 162
+    ELSE NULL
+  END AS height,
+  CASE
+    WHEN gender = 'M' THEN
+      CASE
+        WHEN bmi = 39.5 THEN 120.97
+        WHEN bmi = 24.3 THEN 74.42
+        WHEN bmi = 24.8 THEN 75.95
+        WHEN bmi = 21.7 THEN 66.46
+        WHEN bmi = 30 THEN 91.88
+        WHEN bmi = 28.34 THEN 86.79
+        WHEN bmi = 29.20 THEN 89.43
+        WHEN bmi = 34.95 THEN 107.03
+        WHEN bmi = 34.606666666666669 THEN 105.98
+        WHEN bmi = 22.3 THEN 68.29
+        WHEN bmi = 30.51 THEN 93.44
+        WHEN bmi = 25.4 THEN 77.79
+        WHEN bmi = 27 THEN 82.69
+        WHEN bmi = 24.9 THEN 76.26
+        WHEN bmi = 24.75 THEN 75.80
+        WHEN bmi = 28 THEN 85.75
+        WHEN bmi = 23.8 THEN 72.89
+        WHEN bmi = 35.72877 THEN 109.42
+        WHEN bmi = 26.395 THEN 80.83
+        WHEN bmi = 23 THEN 70.44
+        ELSE NULL
+      END
+    WHEN gender = 'F' THEN
+      CASE
+        WHEN bmi = 39.50 THEN 103.67
+        WHEN bmi = 24.30 THEN 63.77
+        WHEN bmi = 24.80 THEN 65.10
+        WHEN bmi = 21.70 THEN 56.95
+        WHEN bmi = 30.00 THEN 78.73
+        WHEN bmi = 28.34 THEN 74.37
+        WHEN bmi = 29.20 THEN 76.65
+        WHEN bmi = 34.95 THEN 91.73
+        WHEN bmi = 34.606666666666669 THEN 90.83
+        WHEN bmi = 22.30 THEN 58.52
+        WHEN bmi = 30.51 THEN 80.07
+        WHEN bmi = 25.40 THEN 66.67
+        WHEN bmi = 27.00 THEN 70.86
+        WHEN bmi = 24.90 THEN 65.36
+        WHEN bmi = 24.75 THEN 64.97
+        WHEN bmi = 28.00 THEN 73.47
+        WHEN bmi = 23.80 THEN 62.47
+        WHEN bmi = 35.72877 THEN 93.78
+        WHEN bmi = 26.395 THEN 69.27
+        WHEN bmi = 23.00 THEN 60.35
+        ELSE NULL
+      END
+    ELSE NULL
+  END AS weight,
+  bmi
+FROM (SELECT 
+a.person_id,
+a.height, 
+a.weight,
+b.bmi,
+c.gender
+
+FROM 
+yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither a,
+
+(#combined BMI from coded search
+
+SELECT person_id, bmi
+
+FROM 
+(#Deduplicated bmi approximations from ctv3text
+
+WITH ranked_rows AS (
+  SELECT 
+    person_id,
+    ctv3text,
+    bmi,
+    ROW_NUMBER() OVER (
+      PARTITION BY person_id
+      ORDER BY 
+        CASE WHEN bmi IS NOT NULL THEN 0 ELSE 1 END,  -- Prioritize non-null BMI
+        bmi DESC  -- If multiple non-null BMIs, take the highest
+    ) AS row_num
+  FROM (SELECT DISTINCT
+  person_id,
+  ctv3text,
+  CASE
+    WHEN ctv3text = 'Body mass index index 25-29 - overweight' THEN 27
+    WHEN ctv3text = 'Obesity' THEN 34.95
+    WHEN ctv3text = 'Body mass index high K/M2' THEN 34.95
+    WHEN ctv3text = 'Body mass index low K/M2' THEN 18
+    WHEN ctv3text = 'Body mass index 30+ - obesity' THEN 34.95
+    WHEN ctv3text = 'O/E - obese' THEN 34.95
+    WHEN ctv3text = 'Body mass index normal K/M2' THEN 21.7
+    WHEN ctv3text = 'Body mass index - observation' THEN NULL
+    ELSE bmi
+  END AS bmi
+
+FROM
+(SELECT 
+    a.person_id,
+    b.ctv3text,
+    CAST(b.numericvalue AS FLOAT64) AS bmi
+  FROM
+    (SELECT 
+      a.*,
+      b.GCAPMR_date_of_diagnosis
+    FROM
+      yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither a,
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b
+    WHERE a.person_id = b.person_id) a
+  JOIN 
+    yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_codes)
+    GROUP BY
+      code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis)
+
+WHERE bmi < 18)
+
+
+
+)
+SELECT 
+  person_id,
+  bmi
+FROM ranked_rows
+WHERE row_num = 1 AND bmi IS NOT NULL)
+
+UNION ALL
+
+SELECT 
+person_id, bmi
+
+FROM 
+
+( #Deduplicated bmi numeric values
+
+ 
+ SELECT 
+    person_id,
+    #COUNT(*) AS row_count,
+    #COUNT(DISTINCT bmi) AS distinct_bmi_count,
+    AVG(bmi) AS bmi
+  FROM 
+  
+  (SELECT 
+    a.person_id,
+    CAST(b.numericvalue AS FLOAT64) AS bmi
+  FROM
+    (SELECT 
+      a.*,
+      b.GCAPMR_date_of_diagnosis
+    FROM
+      yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither a
+    JOIN
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b
+    ON a.person_id = b.person_id) a
+  JOIN 
+    yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code,
+ term
+      FROM
+        yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_codes)
+    GROUP BY
+      code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis 
+    AND CAST(b.numericvalue AS FLOAT64) > 18 )
+
+    GROUP BY person_id)) b,
+  
+  (SELECT  DISTINCT
+      b.person_id,
+      b.gender
+    FROM yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srpatient b,
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+      WHERE a.person_id = b.person_id) c
+
+WHERE a.height IS NULL AND a.weight IS NULL
+AND a.person_id = b.person_id
+AND a.person_id = c.person_id ))
+
+
+
+
+
+
+
+-- STEP 7: Estimate bmi as overweight for anyone with metabolic syndrome at time of entry into cohort - 21
+-- SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_accurr_2
+
+
+WITH base_data AS (
+  SELECT
+    person_id,
+    bmi,
+    height,
+    weight,
+    gender
+  FROM (SELECT DISTINCT
+    a.person_id,
+    a.gender,
+    a.height,
+    a.weight,
+    27 as bmi
+    #ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+(SELECT a.*,
+b.GCAPMR_date_of_diagnosis,
+c.gender
+
+FROM
+yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither2 a,
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b,
+
+(SELECT DISTINCT 
+      b.person_id,
+      b.gender
+    FROM yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srpatient b,
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+      WHERE a.person_id = b.person_id) c
+
+
+WHERE 
+a.person_id = b.person_id
+AND a.person_id = c.person_id)  a
+  JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+
+  (SELECT 
+  CAST(string_field_0 AS STRING) AS code
+
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.metabolic_sy_codes`) c
+  ON 
+    b.ctv3code = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis  )  -- Replace with your actual table name
+  WHERE bmi IS NOT NULL
+),
+
+calculated_data AS (
+  SELECT
+    person_id,
+    bmi,
+    CASE
+      WHEN height IS NOT NULL THEN height
+      WHEN weight IS NOT NULL THEN ROUND(SQRT(weight / bmi) * 100, 1)
+      WHEN gender = 'M' THEN 175
+      WHEN gender = 'F' THEN 162
+      ELSE NULL
+    END AS calculated_height,
+    CASE
+      WHEN weight IS NOT NULL THEN weight
+      WHEN height IS NOT NULL THEN ROUND(bmi * POW(height / 100, 2), 1)
+      WHEN gender = 'M' THEN
+        CASE
+          WHEN bmi = 39.50 THEN 120.97
+          WHEN bmi = 24.30 THEN 74.42
+          WHEN bmi = 24.80 THEN 75.95
+          WHEN bmi = 21.70 THEN 66.46
+          WHEN bmi = 30.00 THEN 91.88
+          WHEN bmi = 28.34 THEN 86.79
+          WHEN bmi = 29.20 THEN 89.43
+          WHEN bmi = 34.95 THEN 107.03
+          WHEN bmi = 34.60667 THEN 105.98
+          WHEN bmi = 22.30 THEN 68.29
+          WHEN bmi = 30.51 THEN 93.44
+          WHEN bmi = 25.40 THEN 77.79
+          WHEN bmi = 27.00 THEN 82.69
+          WHEN bmi = 24.90 THEN 76.26
+          WHEN bmi = 24.75 THEN 75.80
+          WHEN bmi = 28.00 THEN 85.75
+          WHEN bmi = 23.80 THEN 72.89
+          WHEN bmi = 35.72877 THEN 109.42
+          WHEN bmi = 26.395 THEN 80.83
+          WHEN bmi = 23.00 THEN 70.44
+          ELSE ROUND(bmi * POW(175 / 100, 2), 1)  -- Calculate weight if BMI doesn't match exact values
+        END
+      WHEN gender = 'F' THEN
+        CASE
+          WHEN bmi = 39.50 THEN 103.67
+          WHEN bmi = 24.30 THEN 63.77
+          WHEN bmi = 24.80 THEN 65.10
+          WHEN bmi = 21.70 THEN 56.95
+          WHEN bmi = 30.00 THEN 78.73
+          WHEN bmi = 28.34 THEN 74.37
+          WHEN bmi = 29.20 THEN 76.65
+          WHEN bmi = 34.95 THEN 91.73
+          WHEN bmi = 34.60667 THEN 90.83
+          WHEN bmi = 22.30 THEN 58.52
+          WHEN bmi = 30.51 THEN 80.07
+          WHEN bmi = 25.40 THEN 66.67
+          WHEN bmi = 27.00 THEN 70.86
+          WHEN bmi = 24.90 THEN 65.36
+          WHEN bmi = 24.75 THEN 64.97
+          WHEN bmi = 28.00 THEN 73.47
+          WHEN bmi = 23.80 THEN 62.47
+          WHEN bmi = 35.72877 THEN 93.78
+          WHEN bmi = 26.395 THEN 69.27
+          WHEN bmi = 23.00 THEN 60.35
+          ELSE ROUND(bmi * POW(162 / 100, 2), 1)  -- Calculate weight if BMI doesn't match exact values
+        END
+      ELSE NULL
+    END AS calculated_weight,
+    gender
+  FROM base_data
+)
+
+SELECT
+  person_id,
+  bmi,
+  calculated_height AS height,
+  calculated_weight AS weight,
+  gender
+FROM calculated_data
+
+
+
+-- STEP 8: UNION ALL above - 4406
+
+SELECT 
+person_id, height, weight, bmi
+
+FROM
+
+(WITH base_data AS (
+  SELECT
+    person_id,
+    bmi,
+    height,
+    weight,
+    gender
+  FROM (SELECT DISTINCT
+    a.person_id,
+    a.gender,
+    a.height,
+    a.weight,
+    27 as bmi
+    #ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+(SELECT a.*,
+b.GCAPMR_date_of_diagnosis,
+c.gender
+
+FROM
+yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_13_07_height_weight_orneither2 a,
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b,
+
+(SELECT DISTINCT 
+      b.person_id,
+      b.gender
+    FROM yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srpatient b,
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+      WHERE a.person_id = b.person_id) c
+
+
+WHERE 
+a.person_id = b.person_id
+AND a.person_id = c.person_id)  a
+  JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+
+  (SELECT 
+  CAST(string_field_0 AS STRING) AS code
+
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.metabolic_sy_codes`) c
+  ON 
+    b.ctv3code = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis  )  -- Replace with your actual table name
+  WHERE bmi IS NOT NULL
+),
+
+calculated_data AS (
+  SELECT
+    person_id,
+    bmi,
+    CASE
+      WHEN height IS NOT NULL THEN height
+      WHEN weight IS NOT NULL THEN ROUND(SQRT(weight / bmi) * 100, 1)
+      WHEN gender = 'M' THEN 175
+      WHEN gender = 'F' THEN 162
+      ELSE NULL
+    END AS calculated_height,
+    CASE
+      WHEN weight IS NOT NULL THEN weight
+      WHEN height IS NOT NULL THEN ROUND(bmi * POW(height / 100, 2), 1)
+      WHEN gender = 'M' THEN
+        CASE
+          WHEN bmi = 39.50 THEN 120.97
+          WHEN bmi = 24.30 THEN 74.42
+          WHEN bmi = 24.80 THEN 75.95
+          WHEN bmi = 21.70 THEN 66.46
+          WHEN bmi = 30.00 THEN 91.88
+          WHEN bmi = 28.34 THEN 86.79
+          WHEN bmi = 29.20 THEN 89.43
+          WHEN bmi = 34.95 THEN 107.03
+          WHEN bmi = 34.60667 THEN 105.98
+          WHEN bmi = 22.30 THEN 68.29
+          WHEN bmi = 30.51 THEN 93.44
+          WHEN bmi = 25.40 THEN 77.79
+          WHEN bmi = 27.00 THEN 82.69
+          WHEN bmi = 24.90 THEN 76.26
+          WHEN bmi = 24.75 THEN 75.80
+          WHEN bmi = 28.00 THEN 85.75
+          WHEN bmi = 23.80 THEN 72.89
+          WHEN bmi = 35.72877 THEN 109.42
+          WHEN bmi = 26.395 THEN 80.83
+          WHEN bmi = 23.00 THEN 70.44
+          ELSE ROUND(bmi * POW(175 / 100, 2), 1)  -- Calculate weight if BMI doesn't match exact values
+        END
+      WHEN gender = 'F' THEN
+        CASE
+          WHEN bmi = 39.50 THEN 103.67
+          WHEN bmi = 24.30 THEN 63.77
+          WHEN bmi = 24.80 THEN 65.10
+          WHEN bmi = 21.70 THEN 56.95
+          WHEN bmi = 30.00 THEN 78.73
+          WHEN bmi = 28.34 THEN 74.37
+          WHEN bmi = 29.20 THEN 76.65
+          WHEN bmi = 34.95 THEN 91.73
+          WHEN bmi = 34.60667 THEN 90.83
+          WHEN bmi = 22.30 THEN 58.52
+          WHEN bmi = 30.51 THEN 80.07
+          WHEN bmi = 25.40 THEN 66.67
+          WHEN bmi = 27.00 THEN 70.86
+          WHEN bmi = 24.90 THEN 65.36
+          WHEN bmi = 24.75 THEN 64.97
+          WHEN bmi = 28.00 THEN 73.47
+          WHEN bmi = 23.80 THEN 62.47
+          WHEN bmi = 35.72877 THEN 93.78
+          WHEN bmi = 26.395 THEN 69.27
+          WHEN bmi = 23.00 THEN 60.35
+          ELSE ROUND(bmi * POW(162 / 100, 2), 1)  -- Calculate weight if BMI doesn't match exact values
+        END
+      ELSE NULL
+    END AS calculated_weight,
+    gender
+  FROM base_data
+)
+
+SELECT
+  person_id,
+  bmi,
+  calculated_height AS height,
+  calculated_weight AS weight,
+  gender
+FROM calculated_data)
+
+UNION ALL
+
+SELECT 
+
+person_id, height, weight, bmi
+
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_accur
