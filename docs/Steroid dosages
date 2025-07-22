@@ -1,0 +1,1301 @@
+--FINAL CODE--
+
+#1 Create master cohort with steroids
+-- SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_master_list_FINAL --
+
+SELECT
+c.person_id,
+c.ctv3text as diagnosis,
+c.GCAPMR_diagnosis_date,
+c.GCAPMR_diagnosis_age,
+d.DMplusD_ProductDescription as name_of_medication,
+d.medicationdosage,
+d.medicationquantity,
+d.datemedicationstart,
+d.datemedicationend,
+d.tbl_srprimarycaremedication_start_date as prescription_date,
+d.tbl_srprimarycaremedication_end_date,
+d.rowidentifier,
+d.dateeventrecorded,
+d.dateevent,
+d.iddoneby,
+d.idorganisationdoneat,
+d.nameofmedication,
+d.issupervised,
+d.superviseddose,
+d.unsuperviseddose,
+d.isrepeatmedication,
+d.isothermedication,
+d.isdentalmedication,
+d.ishospitalmedication,
+d.idorganisation,
+d.idorganisationregisteredat
+
+FROM 
+`yhcr-prd-phm-bia-core.CB_1745.Final_cohort_raw` c,
+
+(SELECT 
+a.code, 
+a.term, 
+a.SNOMED_Code, 
+a.DMplusD_ProductDescription,
+
+b.person_id,
+b.tbl_srprimarycaremedication_start_date,
+b.tbl_srprimarycaremedication_end_date,
+b.rowidentifier,
+b.dateeventrecorded,
+b.dateevent,
+b.iddoneby,
+b.idorganisationdoneat,
+b.nameofmedication,
+b.datemedicationstart,
+b.datemedicationend,
+b.medicationdosage,
+b.medicationquantity,
+b.issupervised,
+b.superviseddose,
+b.unsuperviseddose,
+b.isrepeatmedication,
+b.isothermedication,
+b.isdentalmedication,
+b.ishospitalmedication,
+b.idorganisation,
+b.idorganisationregisteredat
+
+FROM 
+`yhcr-prd-phm-bia-core.CB_MYSPACE_KF.Final steroid codelist` a,
+`yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srprimarycaremedication` b
+
+WHERE a.DMplusD_ProductDescription=b.nameofmedication) d
+
+WHERE 
+c.person_id = d.person_id
+
+#2 Replace the master steroid table with date converted
+
+CREATE OR REPLACE TABLE `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_master_list_FINAL` AS 
+SELECT 
+*,
+PARSE_DATE('%Y-%m-%d', GCAPMR_diagnosis_date) as GCAPMR_date_of_diagnosis
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_master_list_FINAL
+
+
+#3 Drop extra diagnosis date column
+
+ALTER TABLE `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_master_list_FINAL` DROP COLUMN GCAPMR_diagnosis_date;
+
+#4 Deduplicate
+--SAVED AS yhcr-prd-phm-bia-core.CB_1745.steroid_master_list_FINAL_DEDUPED
+
+SELECT DISTINCT 
+person_id,
+diagnosis,
+GCAPMR_date_of_diagnosis,
+GCAPMR_diagnosis_age,
+name_of_medication,
+medicationdosage,
+medicationquantity,
+datemedicationstart,
+datemedicationend,
+prescription_date,
+tbl_srprimarycaremedication_end_date,
+rowidentifier,
+dateeventrecorded,
+dateevent,
+iddoneby,
+idorganisationdoneat,
+nameofmedication,
+issupervised,
+superviseddose,
+unsuperviseddose,
+isrepeatmedication,
+isothermedication,
+isdentalmedication,
+ishospitalmedication,
+idorganisation,
+idorganisationregisteredat
+
+FROM `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_master_list_FINAL`
+
+ORDER BY rowidentifier
+
+#5 First steroid prescription
+--SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.1st_steroid_Rx_FINAL --
+
+****
+#Assign unique row number to each row for each patient, ordered ASC, with rows partitioned by patient_id
+WITH prescription_ranked AS (
+  SELECT
+    person_id,
+    diagnosis,
+    prescription_date,
+    ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY prescription_date) AS prescription_rank,
+    name_of_medication 
+
+#Add two conditions - (1) prescription date needs to be after diagnosis date, (2) prescription date should be within 6 months of diagnosis date
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.steroid_master_list_FINAL_DEDUPED
+  WHERE
+    prescription_date >= GCAPMR_date_of_diagnosis
+    AND prescription_date <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 183 DAY)
+)
+
+#Select rows where prescription_rank is 1, indicating first prescription fo reach patient
+SELECT
+  person_id,
+  diagnosis,
+  prescription_date AS first_steroid_prescription_date,
+  name_of_medication
+    
+FROM prescription_ranked
+
+WHERE 
+prescription_rank = 1
+
+***
+
+#6 Second steroid prescription
+--SAVED AS yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids
+
+***
+#Define second_steroid_prescriptions from PMR_GCA_steorid_master table
+WITH second_steroid_prescriptions AS (
+    SELECT
+        t1.person_id,
+        t1.GCAPMR_date_of_diagnosis,
+        t1.prescription_date AS second_steroid_prescription_date,
+        t1.name_of_medication as name_of_second_steroid,
+
+#Assign a row number within each person_id partition ordered by prescription_date
+        ROW_NUMBER() OVER (PARTITION BY t1.person_id ORDER BY prescription_date) AS prescription_rank
+    
+    FROM
+         yhcr-prd-phm-bia-core.CB_1745.steroid_master_list_FINAL_DEDUPED t1
+
+#Add conditions - second prescription date should be after first and within 6 months of first steroid prescription date
+    WHERE
+        prescription_date > (SELECT first_steroid_prescription_date FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.1st_steroid_Rx_FINAL t2 WHERE t2.person_id = t1.person_id)
+
+        AND prescription_date <= DATE_ADD((SELECT first_steroid_prescription_date FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.1st_steroid_Rx_FINAL t2 WHERE t2.person_id = t1.person_id), INTERVAL 183 DAY)
+)
+
+#Main query selecting variables from second_steroid_prescriptions and 1st_steroid_Rx
+SELECT
+    t2.person_id,
+    t2.diagnosis,
+    t3.GCAPMR_date_of_diagnosis,
+    t2.first_steroid_prescription_date,
+    t2.name_of_medication as name_of_first_steroid,
+    t3.second_steroid_prescription_date,
+    t3.name_of_second_steroid
+
+FROM
+    yhcr-prd-phm-bia-core.CB_MYSPACE_KF.1st_steroid_Rx_FINAL t2
+
+#Subquery selecting second_steroid_prescriptions  
+JOIN
+    (
+        SELECT
+            person_id,
+            second_steroid_prescription_date,
+            GCAPMR_date_of_diagnosis,
+            name_of_second_steroid
+
+        FROM
+            second_steroid_prescriptions
+
+#Select only the first-ranked second steroid prescription
+        WHERE
+            prescription_rank = 1
+    ) t3
+ON
+    t2.person_id = t3.person_id;
+
+***
+
+#7 Raw steroid length 
+
+#7a - raw steroid length with selected rules
+
+***
+WITH PrescriptionDurations AS (
+    SELECT
+        b.person_id,
+        a.diagnosis,
+        a.GCAPMR_date_of_diagnosis,
+        b.datemedicationstart,
+        b.datemedicationend,
+        b.name_of_medication,
+        b.medicationdosage,
+        b.medicationquantity,
+
+#LEAD function to get the start date of the next prescription for each person, partitioned by person_id and ordered by datemedicationstart
+        LEAD(b.datemedicationstart) OVER (PARTITION BY b.person_id ORDER BY b.datemedicationstart) AS lead_datemedicationstart
+
+#Joining the final cohort table with the steroid master list table
+    FROM
+        yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+    JOIN
+        yhcr-prd-phm-bia-core.CB_1745.steroid_master_list_FINAL_DEDUPED b
+    ON
+        a.person_id = b.person_id
+    WHERE
+
+#Filtering for medication start dates between 2000-01-01 and 2024-01-01 and after the date of diagnosis
+        b.datemedicationstart >= '2000-01-01'
+        AND b.datemedicationstart >= a.GCAPMR_date_of_diagnosis
+)
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+
+#CASE statement to calculate the duration_in_days based on given rules
+    CASE
+
+#If difference between start and end is 5 days or more then duration in days calculated as difference between datemedication start and datemedicationend
+        WHEN DATE_DIFF(CAST(datemedicationend AS DATE), CAST(datemedicationstart AS DATE), DAY) >= 5 THEN 
+            DATE_DIFF(CAST(datemedicationend AS DATE), CAST(datemedicationstart AS DATE), DAY)
+#If there's a next prescription, calculate difference to next start (applies only if the difference is less than 5 days)
+        WHEN DATE_DIFF(CAST(datemedicationend AS DATE), CAST(datemedicationstart AS DATE), DAY) < 5 
+            AND lead_datemedicationstart IS NOT NULL THEN 
+            DATE_DIFF(CAST(lead_datemedicationstart AS DATE), CAST(datemedicationstart AS DATE), DAY)
+#Otherwise, calculate difference between start and end of current prescription (applies only if the difference is less than 5 days)
+        ELSE 
+            DATE_DIFF(CAST(datemedicationend AS DATE), CAST(datemedicationstart AS DATE), DAY)
+    END AS duration_in_days,
+
+    name_of_medication,
+    medicationdosage,
+    medicationquantity
+
+FROM
+    PrescriptionDurations
+ORDER BY
+    person_id,
+    datemedicationstart
+***
+
+#7b - exclude rescue packs
+-- SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_raw
+
+***
+
+SELECT * FROM
+
+(WITH PrescriptionDurations AS (
+    SELECT
+        b.person_id,
+        a.diagnosis,
+        a.GCAPMR_date_of_diagnosis,
+        b.datemedicationstart,
+        b.datemedicationend,
+        b.name_of_medication,
+        b.medicationdosage,
+        b.medicationquantity,
+
+#LEAD function to get the start date of the next prescription for each person, partitioned by person_id and ordered by datemedicationstart
+        LEAD(b.datemedicationstart) OVER (PARTITION BY b.person_id ORDER BY b.datemedicationstart) AS lead_datemedicationstart
+
+#Joining the final cohort table with the steroid master list table
+    FROM
+        yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+    JOIN
+        yhcr-prd-phm-bia-core.CB_1745.steroid_master_list_FINAL_DEDUPED b
+    ON
+        a.person_id = b.person_id
+    WHERE
+
+#Filtering for medication start dates between 2000-01-01 and 2024-01-01 and after the date of diagnosis
+        b.datemedicationstart >= '2000-01-01'
+        AND b.datemedicationstart >= a.GCAPMR_date_of_diagnosis
+)
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+
+#CASE statement to calculate the duration_in_days based on given rules
+    CASE
+
+#If difference between start and end is 5 days or more
+        WHEN DATE_DIFF(CAST(datemedicationend AS DATE), CAST(datemedicationstart AS DATE), DAY) >= 5 THEN 
+            DATE_DIFF(CAST(datemedicationend AS DATE), CAST(datemedicationstart AS DATE), DAY)
+#If there's a next prescription, calculate difference to next start (applies only if the difference is less than 5 days)
+        WHEN DATE_DIFF(CAST(datemedicationend AS DATE), CAST(datemedicationstart AS DATE), DAY) < 5 
+            AND lead_datemedicationstart IS NOT NULL THEN 
+            DATE_DIFF(CAST(lead_datemedicationstart AS DATE), CAST(datemedicationstart AS DATE), DAY)
+#Otherwise, calculate difference between start and end of current prescription (applies only if the difference is less than 5 days)
+        ELSE 
+            DATE_DIFF(CAST(datemedicationend AS DATE), CAST(datemedicationstart AS DATE), DAY)
+    END AS duration_in_days,
+
+    name_of_medication,
+    medicationdosage,
+    medicationquantity
+
+FROM
+    PrescriptionDurations
+ORDER BY
+    person_id,
+    datemedicationstart)
+
+WHERE  medicationdosage NOT LIKE '%RESCUE%'
+AND medicationdosage NOT LIKE '%rescue%'
+
+***
+
+#8 - fixing durations 
+
+#8a  - select all records were duration in days >1 year, 0 or less or is NULL
+
+***
+SELECT * FROM
+
+yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_raw
+
+WHERE duration_in_days > 365
+OR duration_in_days IS NULL
+OR duration_in_days <= 0
+
+***
+
+#8b - hand went through durations and calculated (1 - if possible calculated from medicationquantity/dosage; 2 - if not and number of days available used that; 3 - otherwise 0)
+
+--Final_fixing_duration_in_days CSV file on desktop
+
+#8c - uploaded the new table to Big Query
+-- SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.hand_fixed_duration_in_days
+
+#8d - saved working tables
+-- yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table2_28_06 -- the original table form 8a 
+
+SELECT 
+*, 
+ROW_NUMBER() OVER () AS row_num
+
+FROM 
+
+(SELECT * FROM
+
+yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_raw
+
+WHERE duration_in_days > 365
+OR duration_in_days IS NULL
+OR duration_in_days <= 0
+
+ORDER BY person_id ASC, medicationdosage, medicationquantity, name_of_medication, duration_in_days, datemedicationstart)
+
+-- yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table1_28_06 -- the hand-fixed duration in days table with person_ID ordered ASC 
+
+SELECT 
+*, 
+ROW_NUMBER() OVER () AS row_num
+
+FROM 
+(SELECT *
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.hand_fixed_duration_in_days
+ORDER BY person_id ASC, medicationdosage)
+
+#8e - merged selecting new duration_of _days
+--SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.extra_durations_in_days_FINAL
+
+***
+
+SELECT 
+    a.person_id,
+    a.diagnosis,
+    a.GCAPMR_date_of_diagnosis,
+    a.datemedicationstart,
+    a.datemedicationend,
+    b.duration_in_days,
+    a.name_of_medication,
+    a.medicationdosage,
+    a.medicationquantity
+FROM 
+   yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table2_28_06 a
+JOIN 
+    yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table1_28_06 b
+ON 
+    a.row_num = b.row_num
+ORDER BY 
+    a.row_num;
+***
+
+#8f Convert duration_in_days from FLOAT to INTEGER
+--SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.extra_durations_in_days_FINAL_INT
+
+SELECT 
+    person_id, 
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    CAST(duration_in_days AS INT64) AS duration_in_days,
+    name_of_medication,
+    medicationdosage, 
+    medicationquantity
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.extra_durations_in_days_FINAL
+
+#8g - selected rows from raw steroid duration table that do not appear in hand-curated duration table & UNION ALL with hand-curated table
+
+CREATE TABLE `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_durations_fixed` AS
+SELECT 
+*
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.extra_durations_in_days_FINAL_INT
+
+UNION ALL
+
+SELECT
+*
+FROM (SELECT a.*
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_raw a
+
+#Ensures that all rows from the main table a are included, and rows from subquery b are included where there is a match on all columns
+LEFT JOIN (
+    SELECT *
+    FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_raw
+    WHERE duration_in_days > 365
+       OR duration_in_days IS NULL
+       OR duration_in_days <= 0
+) b
+
+#This comparison treats NULL values as equal, ensuring proper handling of NULL values in the join condition
+ON a.person_id IS NOT DISTINCT FROM b.person_id
+   AND a.diagnosis IS NOT DISTINCT FROM b.diagnosis
+   AND a.GCAPMR_date_of_diagnosis IS NOT DISTINCT FROM b.GCAPMR_date_of_diagnosis
+   AND a.datemedicationstart IS NOT DISTINCT FROM b.datemedicationstart
+   AND a.datemedicationend IS NOT DISTINCT FROM b.datemedicationend
+   AND a.duration_in_days IS NOT DISTINCT FROM b.duration_in_days
+   AND a.name_of_medication IS NOT DISTINCT FROM b.name_of_medication
+   AND a.medicationdosage IS NOT DISTINCT FROM b.medicationdosage
+   AND a.medicationquantity IS NOT DISTINCT FROM b.medicationquantity
+
+#Filters out rows from the main table a that have corresponding matches in subquery b
+WHERE b.person_id IS NULL)
+
+
+#8h Dealing with duration_in_days 0-4 and selecting rows with duration_in_days >0 and not NULL from final table (and further removing Rescue packs)
+--SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_durations_fixed_0to4
+
+SELECT * FROM
+(WITH all_prescriptions AS (
+  SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    medicationdosage,
+    medicationquantity,
+
+#LEAD function finds the next prescription start date for each person
+    LEAD(datemedicationstart) OVER (PARTITION BY person_id ORDER BY datemedicationstart) AS next_start
+  FROM
+    yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_durations_fixed
+)
+
+#Main query starts here
+SELECT
+  person_id,
+  diagnosis,
+  GCAPMR_date_of_diagnosis,
+  datemedicationstart,
+  datemedicationend,
+
+#This CASE statement calculates the new duration_in_days
+  CASE
+
+#If duration is 0-4 days and there's a next prescription, calculate new duration
+    WHEN duration_in_days IN (0, 1, 2, 3, 4) AND next_start IS NOT NULL
+      THEN DATE_DIFF(next_start, datemedicationstart, DAY)
+
+#If duration is 0 and there's no next prescription, set to NULL
+    WHEN duration_in_days = 0 AND next_start IS NULL
+      THEN NULL
+
+#For all other cases, keep the original duration
+
+    ELSE duration_in_days
+
+  END AS duration_in_days,
+  name_of_medication,
+  medicationdosage,
+  medicationquantity,
+
+  #Keep the original duration for comparison
+  duration_in_days AS original_duration_in_days,
+
+#This CASE statement creates a status column to track changes
+  CASE
+    WHEN duration_in_days IN (0, 1, 2, 3, 4) AND next_start IS NOT NULL THEN 'Changed - Next Prescription'
+    WHEN duration_in_days = 0 AND next_start IS NULL THEN 'Changed - Set to NULL'
+    ELSE 'Unchanged'
+  END AS duration_status
+
+FROM
+  all_prescriptions
+ORDER BY
+  person_id, datemedicationstart)
+
+WHERE 
+medicationdosage NOT LIKE '%Rescue%'
+AND duration_in_days IS NOT NULL
+AND duration_in_days > 0
+
+
+
+#9 - number of tablets a
+
+1. Selected all that would work with below
+(2. realised ordering was wrong - went through trying to fix as many as possible most will be ok. will need to disregard any with number of tablets 0)
+3. Selected ones that would not - 4052 records
+3. Went through by hand - 0 if cannot work out value (will need to exclude this later) ; excluded some outliers
+4. converted TIMESTAMP to DATETIME and got rid of number of tabs = 0 (outliers/incorrect info)
+
+
+--SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_second_half_no_of_tabs
+
+***
+SELECT 
+person_id,
+diagnosis,
+GCAPMR_date_of_diagnosis,
+DATETIME(datemedicationstart) AS datemedicationstart,
+DATETIME(datemedicationend) AS datemedicationend,
+duration_in_days,
+name_of_medication,
+medicationquantity,
+medicationdosage,
+CAST(number_of_tablets AS INT64) AS number_of_tablets
+
+FROM  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.right_duration_in_days_no_of_tabs
+WHERE person_ID IS NOT NULL
+AND number_of_tablets > 0
+
+***
+
+#10 - number of tablets b
+--> excluded number_of_tablets 0 at this point
+
+***
+# Part 1 number of tablets
+-- SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.part_1_NOT
+***
+
+SELECT 
+person_id,
+diagnosis,
+GCAPMR_date_of_diagnosis,
+datemedicationstart,
+datemedicationend,
+duration_in_days,
+name_of_medication,
+medicationquantity,
+medicationdosage,
+number_of_tablets
+
+FROM
+
+(SELECT
+*
+
+FROM
+
+#Series of CASE statements - evaluates a series of conditions and returns result for first condition that is true, liaising result as number_of_tablets. If none of the conditions are met, the number_of_tablets will be NULL
+#Series of REGEXP_CONTAINS statements checking if 'medicationquantity' matches the regular expression
+#The extracted value is CAST into an INT64
+
+(
+SELECT 
+  *,
+  CASE
+
+#Format X tablet, tablet(s), tablets, tab, tabs, capsules, capsule, TABLET, TABLETS, TABLET(S), tablets NOMAD, tablet(s) NOMAD, tabletsNOMAD, tablet(s) Temp., X.00 tablet(s), Tablets
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\b\d+(\.\d+)?\s*tablets?\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)\b(\d+)(?:\.\d+)?\s*tablets?\b') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\b\d+(\.\d+)?\s*tablet\(s\)\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)\b(\d+)(?:\.\d+)?\s*tablet\(s\)\b') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\b\d+(\.\d+)?\s*tab\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)\b(\d+)(?:\.\d+)?\s*tab\b') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\b\d+(\.\d+)?\s*tabs\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)\b(\d+)(?:\.\d+)?\s*tabs\b') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\b\d+(\.\d+)?\s*capsules?\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)\b(\d+)(?:\.\d+)?\s*capsules?\b') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\b\d+(\.\d+)?\s*tabl\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)\b(\d+)(?:\.\d+)?\s*tabl\b') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\b\d+(\.\d+)?\s*TABLET\(S\)\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)\b(\d+)(?:\.\d+)?\s*TABLET\(S\)\b') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\b\d+(\.\d+)?\s*TABLET\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)\b(\d+)(?:\.\d+)?\s*TABLET\b') AS INT64)
+
+#Format X tablets - n mg, X tablet - n mg, X tablet(s) - n mg
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\b\d+(\.\d+)?\s*tablets?\s*-\s*\d+(\.\d+)?\s*mg\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)\b(\d+)(?:\.\d+)?\s*tablets?\s*-\s*\d+(\.\d+)?\s*mg\b') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\b\d+(\.\d+)?\s*tablet\(s\)\s*-\s*\d+(\.\d+)?\s*mg\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)\b(\d+)(?:\.\d+)?\s*tablet\(s\)\s*-\s*\d+(\.\d+)?\s*mg\b') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\b\d+(\.\d+)?\s*tablet\s*-\s*\d+(\.\d+)?\s*mg\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)\b(\d+)(?:\.\d+)?\s*tablet\s*-\s*\d+(\.\d+)?\s*mg\b') AS INT64)
+
+#Format: X
+ WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)^\d+$') THEN CAST(medicationquantity AS INT64)
+
+#Format: 'X NOMAD', 'X op', 'Xtablets', 'Xtab', 'Xtablet(s)', 'XNOMAD'
+ WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\d+\s*NOMAD\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)(\d+)\s*NOMAD\b') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\d+\s*op\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)(\d+)\s*op\b') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\d+tablets\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)(\d+)tablets\b') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\d+tab\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)(\d+)tab\b') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\d+tablet\(s\)') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)(\d+)tablet\(s\)') AS INT64)
+
+#Format: x 300
+
+WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)x\s*(\d+)') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)x\s*(\d+)') AS INT64)
+
+#Format: Total: X tablet
+
+WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)Total:\s*(\d+)\s*tablet') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)Total:\s*(\d+)\s*tablet') AS INT64)
+
+ELSE NULL
+
+  END AS number_of_tablets
+
+FROM
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_durations_fixed_0to4)
+
+#Select relevant medicationquantity formats from Excel sheet
+WHERE medicationquantity IN (
+'0 tablet(s)', '1 tablet', '1 tablet(s)', '1 tablets', '10 tab', '10 tablet', '10 tablet(s)', '10 tablets', '100 tablet(s)', '100 capsule', '100 capsules', '100 tab', '100 tabl', '100 TABLET', '100 tablet', '100 TABLET(S)', '100 tablet(s)', '100 TABLETS', '100 tablets', '100 tabs', '100.00 tablet(s)', '1000 tab', '1000 tablets', '104 tablet', '104 tablets', '105 tablet', '105 tablets', '106 tablet', '106 tablets', '108 tablet', '108 tablets', '11 tablet(s)', '11 tablet', '11 tablets', '11 tablets NOMAD', '110 tablet', '110 tablets', '112 tab', '112 TABLET', '112 tablet', '112 TABLET(S)', '112 tablet(s)', '112 tablet(s) NOMAD', '112 tablets', '112 tablets NOMAD', '112 tabs', '112 tabs tablets', '112.00 tablet(s)', '115 tablet', '116 tablet', '117 tablet', '119 tablet', '119 tablets', '12 tab', '12 TABLET', '12 tablet', '12 tablets', '120 tab', '120 TABLET', '120 tablet', '120 TABLET(S)', '120 tablet(s)', '120 tablets','122 tablet', '122 tablets', '124 tablet', '1240 tablets', '125 tablet', '126 tablet', '126 tablet(s)', '126 tablets', '127 tablet', '128 tablet', '128 tablet(s)', '13 tablet', '13 tablets', '130 tablet', '130 tablet(s)', '130 tablets', '132 tablet', '132 tablets', '133 tablet', '136 tablet', '138 tablet', '139 tablet', '14 tab', '14 TABLET', '14 tablet', '14 TABLET(S)', '14 tablet(s)', '14 TABLETS', '14 tablets', '14 tablets NOMAD', '14.00 tablet(s)', '140 tab', '140 tablet', '140 tablet(s)', '140 tablets', '142 tablet', '144 tablet', '147 tablet', '147 tablets', '148 tablet', '15 TABLET', '15 tablet', '15 tablet(s)', '15 tablets', '150 tab', '150 TABLET', '150 tablet', '150 TABLET(S)', '150 tablet(s)', '150 tablets', '150 tabs tablets','1512 tablet', '154 tablet', '154 tablets', '156 tablet', '1568 tablet', '16 tablet', '16 tablet(s)', '16 tablets', '160 TABLET', '160 tablet', '160 TABLET(S)', '160 tablet(s)', '160 tablets', '161 tablet', '164 tablet', '168 capsules', '168 tab', '168 TABLET', '168 tablet', '168 TABLET(S)', '168 tablet(s)', '168 tablet(s) Temp.', '168 tablets', '168 tabs', '169 tablet', '17 tablet', '17 tablet(s)', '17 tablets', '170 tablet', '170 tablet(s)', '170 tablets', '175 tablet', '18 tablet', '18 tablet(s)', '18 tablets', '180 TABLET', '180 tablet', '180 tablet(s)', '180 tablets', '182 tablet', '184 tablet', '184 tablets', '186 tablet', '19 tablet', '192 tablet', '195 tablets', '196 tab', '196 TABLET', '196 tablet', '196 tablet(s)', '196 tablets', '2 tab', '2 tablet', '2 tablet(s)', '2 tablets', '20 tablet', '20 tablet(s)', '20 tablets', '200 tablet(s)', '200 tab', '200 TABLET', '200 tablet', '200 TABLET(S)', '200 tablet(s)', '200 tablets', '200 tabs', '2019 tablet', '208 tablet', '21 capsule', '21 tab', '21 TABLET', '21 tablet', '21 TABLET(S)', '21 tablet(s)', '21 TABLETS', '21 tablets', '21 tablets NOMAD','210 tab', '210 tablet', '210 tablet(s)', '210 tablets', '212 tablets', '214 tablet', '216 tablet', '217 tablet', '22 tablet', '22 tablets', '220 tablet', '2224 tablets', '224 tab', '224 TABLET', '224 tablet', '224 tablet(s)', '224 tablets', '2240 tablets', '228 tablet(s)', '23 tablet', '230 tablet', '232 tablet(s)', '235 tablet', '238 tablet', '24 tablet', '24 tablet(s)', '24 tablets', '240 TABLET', '240 tablet', '240 TABLET(S)', '240 tablet(s)', '240 tablets', '242 tablet', '244 tablet(s)', '245 tablets', '248 tablet', '25 tablet', '25 tablet(s)', '25 tablets', '250 TABLET', '250 tablet', '250 tablet(s)', '250 tablets', '252 TABLET', '252 tablet', '252 tablet(s)', '252 tablets', '256 tablet', '26 tablet', '26 tablets', '260 tablet', '260 tablets', '262 tablet', '264 tablet(s)', '266 tablet', '266 tablets', '27 tablet', '270 tablet', '270 tablets', '273 tablet', '28 capsule', '28 tab', '28 TABLET', '28 tablet', '28 TABLET(S)', '28 tablet(s)', '28 tablet(s) NOMAD', '28 TABLETS', '28 tablets', '28 tablets NOMAD', '28 tabs', '28.00 tablet(s)','280 tablet', '280 tablet(s)', '280 tablets', '280 tabs', '2800 tablet', '282 tablets', '284 tablet', '29 tablet', '29 tablets', '294 tablet', '296 tablet', '3 tab', '3 tablet', '3 tablet(s)', '3 tablets', '30 tablets', '30 tab', '30 TABLET', '30 tablet', '30 tablet(s)', '30 tablets', '300 tab', '300 tablet', '300 TABLET(S)', '300 tablet(s)', '300 tablets', '308 tablet', '31 tablet', '31 tablets', '315 tablet', '32 tablet', '32 tablets', '322 tablet', '325 tablet', '327 tablet', '33 tablet', '33 tablets', '330 tablet', '336 tablet', '336 tablet(s)', '336 tablets', '34 tablet', '34 tablet(s)', '34 tablets', '35 tab', '35 tablet', '35 tablet(s)', '35 tablets', '350 tablet', '36 tab', '36 tablet', '36 TABLET(S)', '36 tablet(s)', '36 Tablets', '36 tablets', '360 tablet', '360 tablets', '364 tablet', '364 tablets', '366 tablets', '38 tab', '38 tablets', '39 tablet', '392 tablet', '4 tab', '4 tablet', '4 tablets', '40 tab', '40 TABLET', '40 tablet', '40 tablet(s)', '40 tablets', '400 TABLET', '400 tablet', '400 tablets', '41 tablet', '41 tablets', '42 tab', '42 TABLET', '42 tablet', '42 TABLET(S)', '42 tablet(s)', '42 TABLETS', '42 tablets', '420 tablet', '420 TABLET(S)', '434 tablets', '44 tablet', '44 tablets', '448 tablet', '448 tablets', '45 tablet', '45 tablet(s)', '45 tablets', '450 tablets', '46 tablet', '46 tablets', '47 tablets', '48 tablet', '48 tablet(s)','48 tablets', '49 tablet', '49 tablets', '5 tablet', '5 tablet(s)', '5 tablets', '50 tab', '50 TABLET', '50 tablet', '50 TABLET(S)', '50 tablet(s)', '50 TABLETS', '50 tablets', '50.00 tablet(s)', '500 tab', '500 tablet', '504 tablets', '51 tablet', '52 tab', '52 tablet', '52 tablets', '52.5 tablets', '53 tablet', '54 tablet', '54 tablets', '55 tablet', '56 tab', '56 tab', '56 TABLET', '56 tablet', '56 TABLET(S)', '56 tablet(s)', '56 tablet(s) NOMAD', '56 TABLETS', '56 tablets', '56 tablets NOMAD', '56 tabs', '56.00 tablet(s)', '560 tablet', '560 tablets', '57 tablet', '58 tablet', '58 tablets', '6 tablet', '6 tablet(s)', '6 tablets', '60 capsules', '60 tab', '60 tabl', '60 TABLET', '60 tablet', '60 TABLET(S)', '60 tablet(s)', '60 TABLETS', '60 tablets', '60 tabs', '60.00 tablet(s)', '600 tablets', '61 tablet', '62 tablet', '62 tablets', '63 TABLET', '63 tablet', '63 tablet(s)', '63 tablets', '64 tablet', '64 tablet(s)', '64 tablets', '65 tablet', '65 tablets', '66 tablet', '67 tablet', '68 tablet', '68 TABLET(S)', '68 tablets', '7 tab', '7 TABLET', '7 tablet', '7 TABLET(S)', '7 tablet(s)', '7 tablet(s) Temp.', '7 tablets', '7 tablets NOMAD', '70 tab', '70 tablet', '70 tablet(s)', '70 tablets', '71 tablet', '71 tablets', '72 tablet', '72 tablets', '74 tablet', '74 tablets', '75 TABLET', '75 tablet', '75 tablet(s)', '75 tablets', '76 tablet', '77 tablet', '77 tablets', '78 tablet', '784 tablet', '79 tablet', '8 tablet', '8 tablets', '80 tab', '80 TABLET', '80 tablet', '80 tablet(s)', '80 tablets', '80 tabs', '81 tablets', '83 tablet', '83 tablets', '84 capsule', '84 capsules', '84 tab', '84 TABLET', '84 tablet', '84 TABLET(S)', '84 tablet(s)', '84 tablet(s) NOMAD', '84 TABLETS', '84 tablets', '84 tablets NOMAD', '84 tabs', '840 tablets', '85 tablet', '86 tablet', '87 tablet', '88 tablets', '9 tablet', '9 tablets', '90 tab', '90 TABLET', '90 tablet', '90 tablet(s)', '90 tablets', '91 tab', '91 tablet', '91 tablets', '92 tablet', '93 tablet', '94 tablet', '96 tablet', '96 tablet(s)', '96 tablets', '98 tablet', '98 tablet(s)', '98 tablets',
+
+
+'0 tablets - 1 mg', '10 tablet - 1 mg', '10 tablet - 2.5 mg', '10 tablet - 5 mg', '10 tablet(s) - 2.5 mg', '10 tablet(s) - 5 mg', '100 tablet - 1 mg', '100 tablet - 2.5 mg', '100 tablet - 5 mg', '100 tablet(s) - 1 mg', '100 tablet(s) - 2.5 mg', '100 tablet(s) - 5 mg', '100 tablets - 1 mg', '100 tablets - 2.5 mg', '100 tablets - 5 mg', '11 tablet - 1 mg', '11 tablet(s) - 1 mg', '112 tablet - 1 mg', '112 tablet - 2.5 mg', '112 tablet - 5 mg', '112 tablet(s) - 1 mg', '112 tablet(s) - 2.5 mg', '112 tablet(s) - 5 mg', '112 tablet(s) - 6 mg', '112 tablets - 1 mg', '112 tablets - 2 mg', '112 tablets - 5 mg', '12 tablet - 2.5 mg', '12 tablet(s) - 5 mg', '120 tablet - 1 mg', '120 tablet - 5 mg', '120 tablet(s) - 1 mg', '120 tablet(s) - 2.5 mg', '120 tablet(s) - 5 mg', '120 tablet(s) - 6 mg', '120 tablets - 1 mg', '120 tablets - 2.5 mg', '126 tablet - 1 mg', '126 tablet - 5 mg', '126 tablet(s) - 1 mg', '126 tablet(s) - 5 mg', '13 tablet - 5 mg', '130 tablet(s) - 5 mg', '14 tablet - 1 mg', '14 tablet - 2.5 mg', '14 tablet - 5 mg', '14 tablet(s) - 1 mg', '14 tablet(s) - 2.5 mg', '14 tablet(s) - 25 mg', '14 tablet(s) - 5 mg', '14 tablets - 1 mg', '14 tablets - 2 mg', '14 tablets - 2.5 mg', '14 tablets - 5 mg', '140 tablet - 1 mg', '140 tablet - 5 mg', '140 tablet(s) - 1 mg', '140 tablet(s) - 2.5 mg', '140 tablet(s) - 5 mg', '140 tablets - 1 mg', '144 tablet(s) - 5 mg', '15 tablet - 5 mg', '15 tablet(s) - 2.5 mg', '15 tablet(s) - 5 mg', '150 tablet - 1 mg', '150 tablet - 2.5 mg', '150 tablet - 5 mg', '150 tablet(s) - 1 mg', '150 tablet(s) - 2.5 mg', '150 tablet(s) - 5 mg', '150 tablets - 1 mg', '16 tablet - 5 mg', '160 tablet - 5 mg', '160 tablet(s) - 5 mg', '168 tablet - 1 mg', '168 tablet - 2.5 mg', '168 tablet - 5 mg', '168 tablet(s) - 1 mg', '168 tablet(s) - 2.5 mg', '168 tablet(s) - 5 mg', '168 tablets - 1 mg', '168 tablets - 5 mg', '17 tablet(s) - 2.5 mg', '18 tablet - 5 mg', '18 tablet(s) - 5 mg', '180 tablet - 1 mg', '180 tablet - 5 mg', '180 tablets - 2.5 mg', '180 tablets - 5 mg', '19 tablet - 1 mg', '196 tablet - 1 mg', '196 tablets - 1 mg', '20 tablet - 2 mg', '20 tablet - 2.5 mg', '20 tablet - 5 mg', '20 tablet(s) - 2.5 mg', '20 tablet(s) - 5 mg', '20 tablets - 5 mg', '200 tablet - 1 mg', '200 tablet - 2.5 mg', '200 tablet - 5 mg', '200 tablet(s) - 1 mg', '200 tablet(s) - 2.5 mg', '200 tablet(s) - 5 mg', '200 tablets - 1 mg', '21 tablet - 1 mg', '21 tablet - 5 mg', '21 tablet(s) - 1 mg', '21 tablet(s) - 2.5 mg', '21 tablet(s) - 5 mg', '21 tablets - 1 mg', '21 tablets - 2.5 mg', '224 tablet - 1 mg', '224 tablet - 5 mg', '224 tablet(s) - 1 mg', '224 tablet(s) - 5 mg', '224 tablets - 1 mg', '224 tablets - 5 mg', '24 tablet - 5 mg', '24 tablet(s) - 5 mg', '240 tablet - 1 mg', '240 tablet - 5 mg', '240 tablet(s) - 5 mg', '240 tablets - 2.5 mg', '25 tablet - 5 mg', '25 tablet(s) - 5 mg', '250 tablet - 1 mg', '250 tablet(s) - 5 mg', '252 tablet(s) - 1 mg', '270 tablet - 1 mg', '28 tablet - 1 mg', '28 tablet - 10 mg', '28 tablet - 2 mg', '28 tablet - 2.5 mg', '28 tablet - 5 mg', '28 tablet(s) - 1 mg', '28 tablet(s) - 2.5 mg', '28 tablet(s) - 5 mg', '28 tablet(s) - 6 mg', '28 tablets - 1 mg', '28 tablets - 2 mg', '28 tablets - 2.5 mg', '28 tablets - 5 mg', '280 tablet(s) - 1 mg', '280 tablet(s) - 5 mg', '3 tablet(s) - 2.5 mg', '30 tablet - 1 mg', '30 tablet - 2.5 mg', '30 tablet - 5 mg', '30 tablet(s) - 2.5 mg', '30 tablet(s) - 5 mg', '30 tablet(s) - 6 mg', '30 tablets - 2.5 mg', '30 tablets - 5 mg', '300 tablet - 1 mg', '300 tablet - 2.5 mg', '300 tablet - 5 mg', '300 tablet(s) - 1 mg', '300 tablet(s) - 5 mg', '300 tablets - 5 mg', '32 tablet - 5 mg', '32 tablet(s) - 1 mg', '336 tablet - 5 mg', '336 tablet(s) - 5 mg', '35 tablet - 1 mg', '35 tablet - 5 mg', '35 tablet(s) - 5 mg', '350 tablet - 5 mg', '4 tablet(s) - 2.5 mg', '40 tablet - 1 mg', '40 tablet - 5 mg', '40 tablet(s) - 1 mg', '40 tablet(s) - 5 mg', '400 tablets - 1 mg', '42 tablet - 2 mg', '42 tablet - 5 mg', '42 tablet(s) - 2.5 mg', '42 tablet(s) - 5 mg', '42 tablets - 1 mg', '42 tablets - 5 mg', '45 tablet(s) - 5 mg', '47 tablet - 1 mg', '47 tablet(s) - 5 mg', '48 tablet - 1 mg', '49 tablet - 5 mg', '49 tablet(s) - 5 mg', '5 tablet - 2.5 mg', '5 tablet - 5 mg', '50 tablet - 1 mg', '50 tablet - 2 mg', '50 tablet - 2.5 mg', '50 tablet - 5 mg', '50 tablet(s) - 1 mg', '50 tablet(s) - 2.5 mg', '50 tablet(s) - 5 mg', '500 tablet(s) - 5 mg', '52 tablet - 5 mg', '53 tablet - 5 mg', '54 tablet(s) - 1 mg', '54 tablet(s) - 5 mg', '56 tablet - 1 mg', '56 tablet - 2 mg', '56 tablet - 2.5 mg', '56 tablet - 5 mg', '56 tablet - 500 micrograms', '56 tablet(s) - 1 mg', '56 tablet(s) - 2.5 mg', '56 tablet(s) - 5 mg', '56 tablets - 1 mg', '56 tablets - 2.5 mg', '56 tablets - 5 mg', '58 tablet - 25 mg', '6 tablet - 1 mg', '6 tablet(s) - 1 mg', '6 tablet(s) - 25 mg', '6 tablet(s) - 5 mg', '60 tablet - 1 mg', '60 tablet - 2.5 mg', '60 tablet - 5 mg', '60 tablet(s) - 1 mg', '60 tablet(s) - 2.5 mg', '60 tablet(s) - 5 mg', '60 tablets - 1 mg', '60 tablets - 2.5 mg', '60 tablets - 5 mg', '60 tabs - 5 mg', '62 tablet - 5 mg', '63 tablet - 1 mg', '64 tablet - 5 mg', '67 tablet(s) - 5 mg', '7 tablet - 1 mg', '7 tablet - 5 mg', '7 tablet(s) - 2.5 mg', '7 tablet(s) - 5 mg', '7 tablets - 1 mg', '7 tablets - 5 mg', '70 tablet - 1 mg', '70 tablet - 5 mg', '70 tablet(s) - 1 mg', '70 tablet(s) - 5 mg', '70 tablets - 1 mg', '75 tablet(s) - 2.5 mg', '75 tablet(s) - 5 mg', '8 tablet - 1 mg', '8 tablet - 2.5 mg', '80 tablet - 1 mg', '80 tablet - 5 mg', '80 tablet(s) - 5 mg', '808 tablet - 1 mg', '81 tablet - 5 mg', '84 tablet - 1 mg', '84 tablet - 2.5 mg', '84 tablet - 5 mg', '84 tablet - 500 micrograms', '84 tablet(s) - 1 mg', '84 tablet(s) - 2.5 mg', '84 tablet(s) - 5 mg', '84 tablets - 1 mg', '84 tablets - 2.5 mg', '84 tablets - 5 mg', '86 tablet - 5 mg', '9 tablet - 5 mg', '90 tablet - 2.5 mg', '90 tablet - 5 mg', '90 tablet(s) - 1 mg', '90 tablet(s) - 5 mg', '90 tablets - 5 mg', '42 tablet - 1 mg',
+
+
+'1', '10', '100', '112', '120', '126', '14', '140', '15', '150', '160', '168', '17', '180', '196', '200', '21', '212', '224', '240', '28', '280', '3', '30', '300', '33', '336', '40', '400', '42', '45', '48', '50', '500', '56', '60', '63', '7', '70', '80', '84', '90',
+
+
+'112 NOMAD', '112 op', '14 NOMAD', '21 NOMAD', '28 NOMAD', '3 NOMAD', '56 NOMAD', '56 NOMAD', '84 NOMAD', '7 NOMAD', '84 NOMAD', '27tablets', '100tab', '100tablets', '60tab', '60tablet(s)', '56NOMAD', 'x 300', 'Total: 1 tablet', 'Total: 102 tablet', 'Total: 119 tablet', 'Total: 18 tablet', 'Total: 2 tablet', 'Total: 3 tablet', 'Total: 34 tablet', 'Total: 42 tablet', 'Total: 43 tablet', 'Total: 44 tablet', 'Total: 62 tablet', 'Total: 84 tablet', 'Total: 92 tablet'
+)
+)
+
+WHERE number_of_tablets > 0
+ 
+
+***
+
+# Part 1a number of tablets
+-- SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.part_1a_NOT
+
+***
+SELECT 
+person_id,
+diagnosis,
+GCAPMR_date_of_diagnosis,
+datemedicationstart,
+datemedicationend,
+duration_in_days,
+name_of_medication,
+medicationquantity,
+medicationdosage,
+number_of_tablets
+
+FROM
+
+(SELECT *
+FROM
+
+#Series of CASE statements - evaluates a series of conditions and returns result for first condition that is true, liaising result as number_of_tablets. If none of the conditions are met, the number_of_tablets will be NULL
+#Series of REGEXP_CONTAINS statements checking if 'medicationquantity' matches the regular expression
+#The extracted value is CAST into an INT64
+
+(
+SELECT 
+  *,
+  CASE
+WHEN REGEXP_CONTAINS(medicationquantity, r'(?i)\d+\s*tablets?\s*NOMAD\b') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(?i)(\d+)\s*tablets?\s*NOMAD\b') AS INT64)
+
+ELSE NULL
+
+  END AS number_of_tablets
+
+FROM
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_durations_fixed_0to4)
+
+#Select relevant medicationquantity formats from Excel sheet
+WHERE medicationquantity IN ('14 tabletsNOMAD', '21 tabletsNOMAD', '28 tabletsNOMAD'
+
+)
+)
+
+WHERE number_of_tablets > 0
+
+***
+
+# Part 2 number of tablets
+-- SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.part_2_NOT
+
+***
+
+SELECT 
+person_id,
+diagnosis,
+GCAPMR_date_of_diagnosis,
+datemedicationstart,
+datemedicationend,
+duration_in_days,
+name_of_medication,
+medicationquantity,
+medicationdosage,
+number_of_tablets
+
+FROM
+
+(SELECT 
+  *
+
+  FROM
+
+(SELECT *, 
+
+CASE
+
+#Format Y*X tablet(s), Y*X tablet, Y*X tablets, Y*X tablet - n mg, Y*X tablet  Temp. - 1 mg, Y*X tablet - 500 micrograms, Y*X TABLET(S), Y*X tablet(s)  Temp. - 5 mg, Y*X tablet(s)  Temp.
+
+ WHEN REGEXP_CONTAINS(medicationquantity, r'\b\d+\*\d+\s*tablet\(s\)?') THEN 
+         CAST(SPLIT(SPLIT(medicationquantity, '*')[SAFE_OFFSET(1)], ' ')[SAFE_OFFSET(0)] AS INT64) * CAST(SPLIT(medicationquantity, '*')[SAFE_OFFSET(0)] AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'\b\d+\*\d+\s*tablet\b') THEN 
+         CAST(SPLIT(SPLIT(medicationquantity, '*')[SAFE_OFFSET(1)], ' ')[SAFE_OFFSET(0)] AS INT64) * CAST(SPLIT(medicationquantity, '*')[SAFE_OFFSET(0)] AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'\b\d+\*\d+\s*tablets\b') THEN 
+         CAST(SPLIT(SPLIT(medicationquantity, '*')[SAFE_OFFSET(1)], ' ')[SAFE_OFFSET(0)] AS INT64) * CAST(SPLIT(medicationquantity, '*')[SAFE_OFFSET(0)] AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'\b\d+\*\d+\s*TABLET\(S\)') THEN 
+         CAST(SPLIT(SPLIT(medicationquantity, '*')[SAFE_OFFSET(1)], ' ')[SAFE_OFFSET(0)] AS INT64) * CAST(SPLIT(medicationquantity, '*')[SAFE_OFFSET(0)] AS INT64)
+
+ 
+ ELSE NULL
+
+  END AS number_of_tablets
+
+FROM
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_durations_fixed_0to4)
+
+WHERE medicationquantity IN (
+'1*30 tablet(s)',
+'1*56 tablet - 1 mg',
+'1*7 tablet - 5 mg',
+'2*28 tablet',
+'2*28 tablet   Temp. - 1 mg',
+'2*28 tablet - 1 mg',
+'2*28 tablet - 5 mg',
+'2*28 tablet - 500 micrograms',
+'2*28 tablet(s)',
+'2*28 tablet(s) - 1 mg',
+'2*28 tablets',
+'2*28 tablets - 1 mg',
+'2*28 tablets - 5 mg',
+'2*30 tablets',
+'2*56 tablet',
+'28*3 tablet - 1 mg',
+'28*4 tablet(s)',
+'28*8 tablet - 1 mg',
+'3*28 TABLET(S)',
+'3*28 tablet',
+'3*28 tablet   Temp. - 1 mg',
+'3*28 tablet - 1 mg',
+'3*28 tablet - 5 mg',
+'3*28 tablet(s)',
+'3*28 tablets',
+'3*30 TABLET(S)',
+'3*30 tablet(s)',
+'3*30 tablet(s)   Temp. - 5 mg',
+'4*28 tablet   Temp. - 1 mg',
+'4*28 tablet - 1 mg',
+'4*28 tablet - 5 mg',
+'4*28 tablet(s)',
+'4*28 tablet(s)   Temp.',
+'4*28 tablets',
+'4*30 tablet(s)',
+'6*28 tablet',
+'6*28 tablet(s) - 1 mg',
+'7*28 tablets - 1 mg',
+'8*28 tablet',
+'8*28 tablet - 1 mg')
+)
+
+WHERE number_of_tablets > 0
+***
+
+#Part 3 number of tablets
+-- SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.part_3_NOT
+
+***
+SELECT *
+
+FROM 
+
+(SELECT *,
+CASE
+
+#Format Y pack of X capsule(s), Y pack of X capsules, Y packs of X tablet(s), Y pack of X tablet(s), Y pack of X tablet(s) NOMAD
+ 
+ WHEN REGEXP_CONTAINS(medicationquantity, r'(\d+)\s+packs?\s+of\s+(\d+)\s+(?:tablet|tab|tablets|capsule|capsules)(?:s)?(?: NOMAD)?') THEN CAST(REGEXP_EXTRACT(medicationquantity, r'(\d+)') AS INT64) * CAST(REGEXP_EXTRACT(medicationquantity, r'of\s+(\d+)') AS INT64)
+
+
+ELSE NULL
+
+  END AS number_of_tablets
+
+FROM
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_durations_fixed_0to4)
+
+WHERE medicationquantity IN (
+'1 pack of 100 capsule(s)',
+'1 pack of 100 tablet(s)',
+'1 pack of 28 tablet(s)',
+'1 pack of 28 tablet(s) NOMAD',
+'1 pack of 30 tablet(s)',
+'1 pack of 50 tablet(s)',
+'1 pack of 500 tablet(s)',
+'1 pack of 56 tablet(s)',
+'1 pack of 60 tablet(s)',
+'10 packs of 28 tablet(s)',
+'100 packs of 28 tablet(s)',
+'11 packs of 28 tablet(s)',
+'112 packs of 28 tablet(s)',
+'12 packs of 28 tablet(s)',
+'14 packs of 28 tablet(s)',
+'16 packs of 28 tablet(s)',
+'168 packs of 28 tablet(s)',
+'2 pack of 28 tablet(s)',
+'2 packs of 100 tablet(s)',
+'2 packs of 28 tablet(s)',
+'2 packs of 30 tablet(s)',
+'2 packs of 56 tablet(s)',
+'2 packs of 60 tablet(s)',
+'28 packs of 28 tablet(s)',
+'3 packs of 100 tablet(s)',
+'3 packs of 28 tablet(s)',
+'3 packs of 30 tablet(s)',
+'3 packs of 56 tablet(s)',
+'4 packs of 100 tablet(s)',
+'4 packs of 28 tablet(s)',
+'4 packs of 30 tablet(s)',
+'4 packs of 56 tablet(s)',
+'42 packs of 28 tablet(s)',
+'5 packs of 28 tablet(s)',
+'56 packs of 28 tablet(s)',
+'6 packs of 28 tablet(s)',
+'6 packs of 30 tablet(s)',
+'7 packs of 28 tablet(s)',
+'8 packs of 28 tablet(s)',
+'8 packs of 30 tablet(s)',
+'84 packs of 28 tablet(s)', 
+'9 packs of 28 tablet(s)')
+
+***
+
+#Part 4 number of tablets
+-- SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.part_4_NOT
+
+***
+
+SELECT 
+person_id,
+diagnosis,
+GCAPMR_date_of_diagnosis,
+datemedicationstart,
+datemedicationend,
+duration_in_days,
+name_of_medication,
+medicationquantity,
+medicationdosage,
+number_of_tablets
+
+FROM
+
+(SELECT *
+
+FROM 
+
+(SELECT *,
+CASE
+
+#Formats:  X - tablets, X - tablet(s), X - 1 mg, X - 5mg
+ WHEN REGEXP_CONTAINS(medicationquantity, r'^(\d+)\s*-\s*tablets?$') THEN
+      CAST(REGEXP_EXTRACT(medicationquantity, r'^(\d+)') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'^(\d+)\s*-\s*tablet\(s\)$') THEN
+      CAST(REGEXP_EXTRACT(medicationquantity, r'^(\d+)') AS INT64)
+    WHEN REGEXP_CONTAINS(medicationquantity, r'^(\d+)\s*-\s*(\d+)\s*mg$') THEN
+      CAST(REGEXP_EXTRACT(medicationquantity, r'^(\d+)') AS INT64)
+
+ELSE NULL
+
+  END AS number_of_tablets
+
+FROM
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_durations_fixed_0to4)
+WHERE medicationquantity IN (
+'100 - 5 mg',
+'112 - tablet(s)',
+'112 - tablets',
+'12 - tablet(s)',
+'120 - tablet(s)',
+'14 - tablet(s)',
+'160 - tablet(s)',
+'164 - tablet(s)',
+'168 - 1 mg',
+'168 - tablet(s)',
+'180 - tablet(s)',
+'184 - tablet(s)',
+'200 - tablet(s)',
+'224 - tablets',
+'100 - tablet(s)',
+'240 - tablet(s)',
+'25 - tablet(s)',
+'28 - 5 mg',
+'28 - tablet(s)',
+'28 - tablets',
+'30 - tablet(s)',
+'30 - tablets',
+'300 - tablet(s)',
+'320 - tablet(s)',
+'4 - tablet(s)',
+'40 - tablet(s)',
+'42 - tablet(s)',
+'42 - tablets',
+'50 - tablet(s)',
+'56 - tablet(s)',
+'60 - tablet(s)',
+'60 - tablets',
+'7 - tablet(s)',
+'84 - tablet(s)',
+'84 - tablets',
+'90 - tablet(s)')
+)
+
+WHERE number_of_tablets > 0
+
+***
+
+#Part 5 number of tablets
+-- SAVED AS yhcr-prd-phm-bia-core.CB_MYSPACE_KF.part_5_NOT
+
+***
+SELECT 
+person_id,
+diagnosis,
+GCAPMR_date_of_diagnosis,
+datemedicationstart,
+datemedicationend,
+duration_in_days,
+name_of_medication,
+medicationquantity,
+medicationdosage,
+number_of_tablets
+
+FROM
+
+(SELECT *
+
+FROM 
+
+(SELECT *,
+CASE
+
+#Format  Y x tablet(s), Y x tablets, Z x Y tablet
+
+WHEN CONTAINS_SUBSTR(medicationquantity, ' x ') THEN
+      CASE
+        WHEN CONTAINS_SUBSTR(medicationquantity, ' x ') AND CONTAINS_SUBSTR(SPLIT(medicationquantity, ' x ')[SAFE_OFFSET(1)], ' ') THEN
+          CAST(SPLIT(medicationquantity, ' x ')[SAFE_OFFSET(0)] AS INT64) *
+          CAST(SPLIT(SPLIT(medicationquantity, ' x ')[SAFE_OFFSET(1)], ' ')[SAFE_OFFSET(0)] AS INT64)
+        ELSE
+          CAST(SPLIT(medicationquantity, ' x ')[SAFE_OFFSET(0)] AS INT64)
+      END
+      
+ELSE NULL
+
+  END AS number_of_tablets
+
+FROM
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_steroid_length_durations_fixed_0to4)
+
+WHERE medicationquantity IN (
+'100 x tablet(s)',
+'100 x tablets',
+'112 x tablet(s)',
+'112 x tablets',
+'120 x tablet(s)',
+'120 x tablets',
+'14 x tablets',
+'150 x tablet(s)',
+'150 x tablets',
+'168 x tablet(s)',
+'168 x tablets',
+'180 x tablets',
+'2 x 28 tablet',
+'20 x tablets',
+'200 x tablet(s)',
+'200 x tablets',
+'28 x tablet(s)',
+'28 x tablets',
+'3 x 28 tablet',
+'3 x 56 tablet',
+'30 x tablet(s)',
+'30 x tablets',
+'4 x 28 tablet',
+'4 x 56 tablet',
+'40 x tablets',
+'400 x tablet(s)',
+'42 x tablets',
+'50 x tablet(s)',
+'50 x tablets',
+'55 x tablets',
+'56 x tablet(s)',
+'56 x tablets',
+'6 x 28 tablet',
+'60 x tablet(s)',
+'60 x tablets',
+'7 x tablet(s)',
+'8 x 28 tablet',
+'80 x tablet(s)',
+'80 x tablets',
+'84 x tablet(s)')
+
+)
+
+WHERE number_of_tablets > 0
+
+
+***
+
+# 11 - UNION ALL parts 1-5 of automated tablet number + hand tablet number calcs
+
+
+CREATE TABLE `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_number_of_tablets` AS
+SELECT
+  person_id,
+  diagnosis,
+  GCAPMR_date_of_diagnosis,
+  datemedicationstart,
+  datemedicationend,
+  duration_in_days,
+  name_of_medication,
+  medicationdosage,
+  medicationquantity,
+  number_of_tablets
+
+FROM
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.part_1_NOT
+
+UNION ALL
+
+SELECT
+  person_id,
+  diagnosis,
+  GCAPMR_date_of_diagnosis,
+  datemedicationstart,
+  datemedicationend,
+  duration_in_days,
+  name_of_medication,
+  medicationdosage,
+  medicationquantity,
+  number_of_tablets
+
+FROM
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.part_1a_NOT
+
+UNION ALL
+
+SELECT
+  person_id,
+  diagnosis,
+  GCAPMR_date_of_diagnosis,
+  datemedicationstart,
+  datemedicationend,
+  duration_in_days,
+  name_of_medication,
+  medicationdosage,
+  medicationquantity,
+  number_of_tablets
+
+FROM
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.part_2_NOT
+
+UNION ALL
+SELECT
+  person_id,
+  diagnosis,
+  GCAPMR_date_of_diagnosis,
+  datemedicationstart,
+  datemedicationend,
+  duration_in_days,
+  name_of_medication,
+  medicationdosage,
+  medicationquantity,
+  number_of_tablets
+
+FROM
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.part_3_NOT
+
+UNION ALL
+SELECT
+  person_id,
+  diagnosis,
+  GCAPMR_date_of_diagnosis,
+  datemedicationstart,
+  datemedicationend,
+  duration_in_days,
+  name_of_medication,
+  medicationdosage,
+  medicationquantity,
+  number_of_tablets
+
+FROM
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.part_4_NOT
+
+UNION ALL
+SELECT
+  person_id,
+  diagnosis,
+  GCAPMR_date_of_diagnosis,
+  datemedicationstart,
+  datemedicationend,
+  duration_in_days,
+  name_of_medication,
+  medicationdosage,
+  medicationquantity,
+  number_of_tablets
+
+FROM
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.part_5_NOT
+
+UNION ALL
+SELECT
+  person_id,
+  diagnosis,
+  GCAPMR_date_of_diagnosis,
+  datemedicationstart,
+  datemedicationend,
+  duration_in_days,
+  name_of_medication,
+  medicationdosage,
+  medicationquantity,
+  number_of_tablets
+
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_second_half_no_of_tabs
+
+#12 - use steroid conversion factor notes (USE - combined steroid conversions) to calculate equivalence to 1mg pred
+
+CREATE TABLE `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions` AS
+SELECT
+  person_id,
+  diagnosis,
+  GCAPMR_date_of_diagnosis,
+  datemedicationstart,
+  datemedicationend,
+  duration_in_days,
+  name_of_medication,
+  medicationdosage,
+  medicationquantity,
+  number_of_tablets,
+  conversion_factor,
+  steroid_dosage,
+  equivalence_dose_to_pred1mg
+
+FROM 
+
+(
+#Create equivalence_dose_to_pred1mg for microgram doses with conversion_factor
+SELECT
+  *,
+  steroid_dosage * conversion_factor AS equivalence_dose_to_pred1mg
+
+FROM
+
+#Convert micrograms to miligrams in new steroid_dose column
+(SELECT
+  *,
+  CASE
+    WHEN REGEXP_CONTAINS(name_of_medication, r'\d+microgram') THEN
+      CAST(REGEXP_REPLACE(REGEXP_EXTRACT(name_of_medication, r'(\d+)microgram'), r'microgram', '') AS FLOAT64) / 1000.0
+  END AS steroid_dosage
+FROM
+
+  (SELECT *
+  FROM
+
+#LEFT JOIN between first half of table with tablet quantities and steroid conversion table
+  (SELECT
+    t1.person_id,
+    t1.diagnosis,
+    t1.GCAPMR_date_of_diagnosis,
+    t1.datemedicationstart,
+    t1.datemedicationend,
+    t1.duration_in_days,
+    t1.name_of_medication,
+    t1.medicationdosage,
+    t1.medicationquantity,
+    t1.number_of_tablets,
+    t2.conversion_factor
+
+  FROM `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_number_of_tablets` t1
+  LEFT JOIN `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_conversion_factors` t2
+  ON t1.name_of_medication = t2.full_steroid_name)
+
+#SELECT name_of_medication where doses are in micrograms
+  WHERE name_of_medication IN (
+    'Dexamethasone 500microgram tablets (Essential Generics Ltd)',
+    'Dexamethasone 500microgram tablets')
+    )
+)
+
+) 
+
+UNION ALL
+SELECT
+  person_id,
+  diagnosis,
+  GCAPMR_date_of_diagnosis,
+  datemedicationstart,
+  datemedicationend,
+  duration_in_days,
+  name_of_medication,
+  medicationdosage,
+  medicationquantity,
+  number_of_tablets,
+  conversion_factor,
+  steroid_dosage,
+  equivalence_dose_to_pred1mg
+
+FROM 
+
+#Extract numeric dosage value from name_of_medication and multiply by conversion factor, casting as a FLOAT variable - for all mg doses (micrograms dealt with above)
+(WITH unique_conversion_factors AS (
+  SELECT full_steroid_name, ANY_VALUE(conversion_factor) AS conversion_factor
+  FROM `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_conversion_factors`
+  GROUP BY full_steroid_name
+)
+
+SELECT 
+    t1.person_id,
+    t1.diagnosis,
+    t1.GCAPMR_date_of_diagnosis,
+    t1.datemedicationstart,
+    t1.datemedicationend,
+    t1.duration_in_days,
+    t1.name_of_medication,
+    t1.medicationdosage,
+    t1.medicationquantity,
+    t1.number_of_tablets,
+    t2.conversion_factor,
+    CAST(REGEXP_EXTRACT(t1.name_of_medication, r'(\d+(?:\.\d+)?)(?:mg|microgram)') AS FLOAT64) AS steroid_dosage,
+    CAST(REGEXP_EXTRACT(t1.name_of_medication, r'(\d+(?:\.\d+)?)(?:mg|microgram)') AS FLOAT64) * t2.conversion_factor AS equivalence_dose_to_pred1mg
+FROM `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_number_of_tablets` t1
+LEFT JOIN unique_conversion_factors t2
+  ON t1.name_of_medication = t2.full_steroid_name
+WHERE t1.name_of_medication NOT IN (
+    'Dexamethasone 500microgram tablets (Essential Generics Ltd)',
+    'Dexamethasone 500microgram tablets'
+)
+
+)
+
+
+#13 - FINAL 13 week steroid calcs (see note)
+
+
