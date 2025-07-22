@@ -1,0 +1,255 @@
+#Query ethnicity count from person table
+
+SELECT COUNT (person_id), ethnicity
+FROM
+(SELECT
+  a.person_id,
+  a.ethnicity_source_value as ethnicity
+FROM
+  yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.person a,
+  yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b
+
+WHERE a.person_id = b.person_id)
+
+
+
+*** New ethnicity
+
+***
+#1 Step 1
+
+***
+
+#So now I’m matching up the ethnicity codes from the person table to my cohort of people
+
+#The person table only has concept id’s. I mapped these to categories using a concept table from my colleague (Lin_clean_ethnic_1220).
+
+#I’ll find out where she got this- suspect John B uploaded it….BUT pretty sure you can just use the concept table in CB_CDM_Vocab (do you have access to this??)
+
+#This should give you 2 variables- one is ethnicity from the person table, one is ethnicity from the sr patient table (next steps below are to merge them)
+
+SELECT a.person_id,
+
+  b.ethnicity_concept_id,
+
+  c.concept_name as _Ethnic_Group_Person_Table,
+
+  d.Ethnicity as Ethnicity_SR_Table,
+
+FROM yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids as a
+
+LEFT JOIN  `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.person` as b
+
+on a.person_id = b.person_id
+
+LEFT JOIN `yhcr-prd-phm-bia-core.CB_CDM_VOCAB.concept` as c
+
+on b.ethnicity_concept_id=c.concept_id
+
+Left JOIN (
+ 
+#Extract person ID and ethnicity from sr patient prep
+#Note that I have picked a random code where people have multiple ones (think more ideal would be to pick most recent but I couldn’t see a time variable!)
+#Also note I found the select row thing by googling- 90% sure it does what I think it does…
+
+SELECT person_id , ethnicity,
+
+FROM (
+
+    SELECT ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY RAND()) AS row_num,
+
+        person_id, ethnicity
+
+    FROM  (
+
+#Sr patient has multiple ethnicity values per person.
+# get rid of the missings so that next you can select randomly from the non missing values for each person
+
+SELECT distinct person_id , ethnicity,
+
+  FROM `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srpatient`
+
+WHERE
+
+ethnicity !="O/E - ethnic group NOS"  AND
+
+ethnicity !="Other Mixed background - ethnic category 2001 census"  AND
+
+ethnicity !="Ethnic groups (census)"  AND
+
+ethnicity !="Not specified - JDB" AND
+
+ethnicity !="Other ethnic non-mixed (NMO)" AND
+
+ethnicity !="Ethnic category - 2001 census" AND
+
+ethnicity !="Ethnic category not stated - 2001 census" AND
+
+ethnicity !="Ethnicity and other related nationality data")
+
+) AS T
+
+WHERE row_num = 1) as d
+
+on a.person_id = d.person_id  
+
+***
+#2 Step 
+
+***
+
+
+ SELECT COUNT (person_id), _Ethnic_Group_Person_Table, Ethnicity_SR_Table
+
+ FROM
+
+#Next I ran this to find all the sr patient ethnicity codes that are filled in when the person table is missing.
+
+#I copied these values into the next chunk of code
+
+(SELECT distinct
+
+person_id,
+
+_Ethnic_Group_Person_Table,
+
+Ethnicity_SR_Table,
+
+FROM (
+
+#So now I’m matching up the ethnicity codes from the person table to my cohort of people
+
+#The person table only has concept id’s. I mapped these to categories using a concept table from my colleague (Lin_clean_ethnic_1220).
+
+#I’ll find out where she got this- suspect John B uploaded it….BUT pretty sure you can just use the concept table in CB_CDM_Vocab (do you have access to this??)
+
+#This should give you 2 variables- one is ethnicity from the person table, one is ethnicity from the sr patient table (next steps below are to merge them)
+
+SELECT a.person_id,
+
+  b.ethnicity_concept_id,
+
+  c.concept_name as _Ethnic_Group_Person_Table,
+
+  d.Ethnicity as Ethnicity_SR_Table,
+
+FROM yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids as a
+
+LEFT JOIN  `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.person` as b
+
+on a.person_id = b.person_id
+
+LEFT JOIN `yhcr-prd-phm-bia-core.CB_CDM_VOCAB.concept` as c
+
+on b.ethnicity_concept_id=c.concept_id
+
+Left JOIN (
+ 
+#Extract person ID and ethnicity from sr patient prep
+#Note that I have picked a random code where people have multiple ones (think more ideal would be to pick most recent but I couldn’t see a time variable!)
+#Also note I found the select row thing by googling- 90% sure it does what I think it does…
+
+SELECT person_id , ethnicity,
+
+FROM (
+
+    SELECT ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY RAND()) AS row_num,
+
+        person_id, ethnicity
+
+    FROM  (
+
+#Sr patient has multiple ethnicity values per person.
+# get rid of the missings so that next you can select randomly from the non missing values for each person
+
+SELECT distinct person_id , ethnicity,
+
+  FROM `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srpatient`
+
+WHERE ethnicity !="O/E - ethnic group NOS"  AND
+
+ethnicity !="Other Mixed background - ethnic category 2001 census"  AND
+
+ethnicity !="Ethnic groups (census)"  AND
+
+ethnicity !="Not specified - JDB" AND
+
+ethnicity !="Other ethnic non-mixed (NMO)" AND
+
+ethnicity !="Ethnic category - 2001 census" AND
+
+ethnicity !="Ethnic category not stated - 2001 census" AND
+
+ethnicity !="Ethnicity and other related nationality data")
+
+) AS T
+
+WHERE row_num = 1) as d
+
+on a.person_id = d.person_id
+
+ 
+)
+
+ WHERE _Ethnic_Group_Person_Table="Other ethnic group: any other ethnic group - England and Wales ethnic category 2011 census" OR 
+
+_Ethnic_Group_Person_Table="Unknown" 
+
+group by _Ethnic_Group_Person_Table,
+
+Ethnicity_SR_Table, person_id)
+
+GROUP BY _Ethnic_Group_Person_Table, Ethnicity_SR_Table
+
+ 
+*** 
+#Step 3
+***
+
+SELECT COUNT (person_id), Ethnic_Group
+
+FROM
+#Now make a new variable called ethnic group that is the person table ethnicity when its not missing
+#When the person table has missing ethnicity, use the Sr patient table ethnicity- recoded into ethnic groups
+#I’ve added 2 examples (I had 84 altogether) but you’ll have to alter this based on the values for your cohort
+
+
+(SELECT
+  person_id,
+  ethnicity_concept_id,
+  _Ethnic_Group_Person_Table,
+  Ethnicity_SR_Table,
+  CASE
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Ethnic groups (census) NOS" THEN "Unknown"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table IS NULL THEN "Unknown"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "White British - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "White:Eng/Welsh/Scot/NI/Brit - England and Wales 2011 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "White British" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Indian or British Indian - ethnic category 2001 census" THEN "Indian/British Indian"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "British or mixed British - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Polish - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Other ethnic Asian/White orig" THEN "Other Asian"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Other White background - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Bangladeshi" THEN "Bangladeshi"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "White Irish" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "White - ethnic group" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "English - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Pakistani or British Pakistani - ethnic category 2001 census" THEN "Pakistani"
+    WHEN _Ethnic_Group_Person_Table = "Other ethnic group: any other ethnic group - England and Wales ethnic category 2011 census" AND Ethnicity_SR_Table = "Other ethnic group" THEN "Unknown"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Irish - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Other ethnic group: any other ethnic group - England and Wales ethnic category 2011 census" AND Ethnicity_SR_Table = "Latin American - ethnic category 2001 census" THEN "Latin American"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Asian - ethnic group" THEN "Other Asian"
+    WHEN _Ethnic_Group_Person_Table = "Other ethnic group: any other ethnic group - England and Wales ethnic category 2011 census" AND Ethnicity_SR_Table = "O/E - ethnic group" THEN "Unknown"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Pakistani" THEN "Pakistani"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Other ethnic group" THEN "Unknown"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Asian/Asian British:Pakistani- Eng+Wales eth cat 2011 census" THEN "Pakistani"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "White Irish - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Other ethnic group: any other ethnic group - England and Wales ethnic category 2011 census" AND Ethnicity_SR_Table = "Other ethnic: any other grp - Eng+Wales eth cat 2011 census" THEN "Unknown"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Asian/Asian Brit: other Asian- Eng+Wales eth cat 2011 census" THEN "Other Asian"
+    WHEN _Ethnic_Group_Person_Table = "Other ethnic group: any other ethnic group - England and Wales ethnic category 2011 census" AND Ethnicity_SR_Table IS NULL THEN "Unknown"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Other Asian background - ethnic category 2001 census" THEN "Other Asian"
+    ELSE _Ethnic_Group_Person_Table
+  END AS Ethnic_Group
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_12_07)
+
+GROUP BY Ethnic_Group
