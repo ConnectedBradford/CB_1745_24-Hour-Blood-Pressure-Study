@@ -1,0 +1,1320 @@
+#First 13 weeks
+
+SELECT 
+  --Median + mean
+  PERCENTILE_CONT(total_dose_in_first_13w, 0.5) OVER() AS median
+  #AVG(total_dose_in_first_13w)
+FROM (
+  SELECT 
+    person_id,
+    #Add up total_pred_doses from two UNION ALL tables (prescriptions that start+end within 13 weeks and prescriptions that start+do not end within 13 weeks)
+    SUM(total_pred_dose) as total_dose_in_first_13w
+  FROM (
+    SELECT
+      person_id,
+      total_pred_dose
+    FROM (
+      #Total dose within first 13 weeks for prescriptions that start + end within the first 13 weeks
+      SELECT
+        person_id,
+        diagnosis,
+        GCAPMR_date_of_diagnosis,
+        datemedicationstart,
+        datemedicationend,
+        duration_in_days,
+        name_of_medication,
+        number_of_tablets,
+        daily_pred_dose,
+        (daily_pred_dose * duration_in_days) AS total_pred_dose -- number of days x daily pred dose gives total pred dose
+      FROM (
+        SELECT 
+          person_id,
+          diagnosis,
+          GCAPMR_date_of_diagnosis,
+          datemedicationstart,
+          DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,-- calculated like this as originally duration_in_days was calculated by difference in datemedicationstart between two prescriptions for some
+          duration_in_days,
+          name_of_medication,
+          number_of_tablets,
+          medicationquantity,
+          medicationdosage,
+          #Tablets per day multiplied by the equivalence dose to prednisolone 1mg gives daily dose
+          (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+        FROM  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+        WHERE
+          datemedicationstart >= GCAPMR_date_of_diagnosis -- select prescriptions starting on or after date of diagnosis
+          AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 13 WEEK) -- select prescriptions ending within the 13 week interval
+      )
+    )
+    UNION ALL
+    SELECT 
+      person_id,
+      total_pred_dose
+    FROM (
+      SELECT 
+        person_id,
+        diagnosis,
+        GCAPMR_date_of_diagnosis,
+        datemedicationstart,
+        datemedicationend,
+        duration_in_days,
+        name_of_medication,
+        number_of_tablets,
+        medicationquantity,
+        medicationdosage,
+        daily_pred_dose,
+        -- Calculate the dose received within the first 13 weeks by calculating the difference from datemedicationstart and day 91 from diagnosis_date
+        DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 91 DAY), datemedicationstart, DAY) * daily_pred_dose AS total_pred_dose
+      FROM (
+        SELECT * 
+        FROM (
+          SELECT 
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+            number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+          FROM (
+            SELECT *
+            FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+            WHERE datemedicationstart >= GCAPMR_date_of_diagnosis -- Include only prescriptions that start on or after the diagnosis date
+              AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 13 WEEK)
+              AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 13 WEEK) -- Include only prescriptions that end after the 13-week mark from the diagnosis date
+          )
+        )
+      )
+    )
+  )
+  GROUP BY person_id
+)
+
+
+#Second 13 weeks
+
+SELECT 
+--Median + mean
+
+PERCENTILE_CONT(total_dose_in_second_13w, 0.5) OVER() AS median
+#AVG(total_dose_in_second_13w) as mean
+
+FROM
+
+(SELECT 
+person_id,
+
+#Add up total_pred_doses from two UNION ALL tables (prescriptions that start+end within 13 weeks and prescriptions that start+do not end within 13 weeks)
+SUM(total_pred_dose) as total_dose_in_second_13w
+FROM
+
+(#Prescriptions starting + ending within the second 13 weeks
+SELECT
+person_id,
+total_pred_dose
+
+FROM 
+
+(SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+   number_of_tablets,
+    daily_pred_dose,
+    (daily_pred_dose * duration_in_days) AS total_pred_dose -- number of days x daily pred dose gives total pred dose
+
+FROM 
+(SELECT 
+        person_id,
+        diagnosis,
+        GCAPMR_date_of_diagnosis,
+        datemedicationstart,
+        DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,-- calculated like this as originally duration_in_days was calculated by difference in datemedicationstart between two prescriptions for some
+        duration_in_days,
+        name_of_medication,
+        number_of_tablets,
+        medicationquantity,
+        medicationdosage,
+        
+#Tablets per day multiplied by the equivalence dose to prednisolone 1mg gives daily dose
+        (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+
+
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+
+)
+
+WHERE
+    datemedicationstart >= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 13 WEEK) -- select prescriptions starting on or after date 13 weeks after diagnosis
+    AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 26 WEEK) -- select prescriptions ending within the second 13 week interval
+)
+
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+
+FROM
+
+(SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+    daily_pred_dose,
+    
+#Calculate the dose received between 13 and 26 weeks
+    CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 26 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose AS total_pred_dose
+
+FROM (
+    SELECT *
+    FROM (
+        SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+            number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+        FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+            
+    )
+    WHERE
+        datemedicationstart >= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 13 WEEK)
+        AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 26 WEEK)
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 26 WEEK)
+)
+)
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+
+FROM 
+
+(SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+    daily_pred_dose,
+    
+    -- Calculate the dose received between 13 and 26 weeks
+    CASE
+        WHEN datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 26 WEEK)
+        THEN CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 26 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose
+        ELSE duration_in_days * daily_pred_dose
+    END AS total_pred_dose
+
+FROM (
+  SELECT *
+    FROM (
+        SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+            number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+       
+        FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+            
+    )
+    WHERE
+        datemedicationstart >= GCAPMR_date_of_diagnosis -- Include prescriptions that start on or after the diagnosis date
+        AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 13 WEEK) -- Include prescriptions that start within 13 weeks of the diagnosis date
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 13 WEEK) -- Include prescriptions that end after the 13-week mark from the diagnosis date
+        AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 26 WEEK) -- Include prescriptions that end within the 13-26 week period from the diagnosis date
+))
+
+)
+
+GROUP BY person_id)
+
+*******************
+
+#Third 13 weeks
+
+SELECT 
+--Median + mean
+
+#PERCENTILE_CONT(total_dose_in_second_13w, 0.5) OVER() AS median
+AVG(total_dose_in_second_13w) as mean
+
+FROM
+(SELECT 
+person_id,
+
+#Add up total_pred_doses from two UNION ALL tables (prescriptions that start+end within 13 weeks and prescriptions that start+do not end within 13 weeks)
+SUM(total_pred_dose) as total_dose_in_second_13w
+
+FROM
+
+(#Prescriptions starting + ending within the third 13 weeks
+SELECT
+person_id,
+total_pred_dose
+
+FROM 
+
+(SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+   datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    daily_pred_dose,
+    (daily_pred_dose * duration_in_days) AS total_pred_dose -- number of days x daily pred dose gives total pred dose
+
+FROM 
+(SELECT 
+        person_id,
+        diagnosis,
+        GCAPMR_date_of_diagnosis,
+        datemedicationstart,
+        DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,-- calculated like this as originally duration_in_days was calculated by difference in datemedicationstart between two prescriptions for some
+        duration_in_days,
+        name_of_medication,
+        number_of_tablets,
+        medicationquantity,
+        medicationdosage,
+        
+#Tablets per day multiplied by the equivalence dose to prednisolone 1mg gives daily dose
+        (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+
+)
+
+WHERE
+    datemedicationstart >= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 26 WEEK) -- select prescriptions starting on or after date 26 weeks after diagnosis
+    AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 39 WEEK) -- select prescriptions ending within the third 13 week interval
+)
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+
+FROM
+
+(#Prescriptions starting but not ending within third 13 weeks
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+    daily_pred_dose,
+    
+#Calculate the dose received between 13 and 26 weeks
+    CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 39 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose AS total_pred_dose
+
+FROM (
+    SELECT *
+    FROM (
+        SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+           number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+        
+            FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+           
+    )
+    WHERE
+        datemedicationstart >= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 26 WEEK)
+        AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 39 WEEK)
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 39 WEEK)
+)
+)
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+
+FROM 
+
+(
+#Prescriptions starting within first 13 weeks but ending with second 13 weeks or later
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+  daily_pred_dose,
+    
+    -- Calculate the dose received between 26 and 39 weeks
+    CASE
+        WHEN datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 39 WEEK)
+        THEN CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 39 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose
+        ELSE duration_in_days * daily_pred_dose
+    END AS total_pred_dose
+
+FROM (
+    SELECT *
+    FROM (
+        SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+       name_of_medication,
+            number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+       
+            FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+            
+    )
+    WHERE
+        datemedicationstart >= GCAPMR_date_of_diagnosis -- Include prescriptions that start on or after the diagnosis date
+        AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 26 WEEK) -- Include prescriptions that start within 26 weeks of the diagnosis date
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 26 WEEK) -- Include prescriptions that end after the 26-week mark from the diagnosis date
+        AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 39 WEEK) -- Include prescriptions that end within the 26-39 week period from the diagnosis date
+))
+
+)
+
+GROUP BY person_id)
+
+***********************
+#Fourth 13 weeks
+SELECT 
+--Median + mean
+
+#PERCENTILE_CONT(total_dose_in_second_13w, 0.5) OVER() AS median
+AVG(total_dose_in_second_13w) as mean
+
+FROM
+
+(SELECT 
+person_id,
+
+#Add up total_pred_doses from two UNION ALL tables (prescriptions that start+end within 13 weeks and prescriptions that start+do not end within 13 weeks)
+SUM(total_pred_dose) as total_dose_in_second_13w
+
+FROM
+
+(#Prescriptions starting + ending within the fourth 13 weeks
+SELECT
+person_id,
+total_pred_dose
+
+FROM 
+(SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    daily_pred_dose,
+    (daily_pred_dose * duration_in_days) AS total_pred_dose -- number of days x daily pred dose gives total pred dose
+FROM 
+(SELECT 
+        person_id,
+        diagnosis,
+        GCAPMR_date_of_diagnosis,
+        datemedicationstart,
+        DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,-- calculated like this as originally duration_in_days was calculated by difference in datemedicationstart between two prescriptions for some
+        duration_in_days,
+        name_of_medication,
+        number_of_tablets,
+        medicationquantity,
+        medicationdosage,
+        
+#Tablets per day multiplied by the equivalence dose to prednisolone 1mg gives daily dose
+        (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+
+
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+)
+
+WHERE
+    datemedicationstart >= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 39 WEEK) -- select prescriptions starting on or after date 39 weeks after diagnosis
+    AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 52 WEEK) -- select prescriptions ending within the fourth 13 week interval
+)
+
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+
+FROM
+
+(#Prescriptions starting but not ending within fourth 13 weeks
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+    daily_pred_dose,
+    
+#Calculate the dose received between 39 and 52 weeks
+    CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 52 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose AS total_pred_dose
+
+FROM (
+    SELECT *
+    FROM (
+        SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+     DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+            number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+        
+            FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+            
+    )
+    WHERE
+        datemedicationstart >= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 39 WEEK)
+        AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 52 WEEK)
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 52 WEEK)
+)
+)
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+
+FROM 
+
+(
+#Prescriptions starting within fourth 13 weeks but ending with within fifth 13 weeks or later
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+    daily_pred_dose,
+    -- Calculate the dose received between 26 and 39 weeks
+    CASE
+        WHEN datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 52 WEEK)
+        THEN CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 52 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose
+        ELSE duration_in_days * daily_pred_dose
+    END AS total_pred_dose
+
+FROM (
+    SELECT *
+    FROM (
+        SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+           number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+        
+            FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+            
+    )
+    WHERE
+        datemedicationstart >= GCAPMR_date_of_diagnosis -- Include prescriptions that start on or after the diagnosis date
+        AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 39 WEEK) -- Include prescriptions that start within 39 weeks of the diagnosis date
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 39 WEEK) -- Include prescriptions that end after the 39-week mark from the diagnosis date
+        AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 52 WEEK) -- Include prescriptions that end within the 39-52 week period from the diagnosis date
+))
+
+)
+
+GROUP BY person_id)
+
+ 
+
+*************
+
+  #Fifth 13 weeks
+
+SELECT 
+--Median + mean
+
+PERCENTILE_CONT(total_dose_in_second_13w, 0.5) OVER() AS median
+#AVG(total_dose_in_second_13w) as mean
+
+FROM
+
+(SELECT 
+person_id,
+
+#Add up total_pred_doses from two UNION ALL tables (prescriptions that start+end within 13 weeks and prescriptions that start+do not end within 13 weeks)
+SUM(total_pred_dose) as total_dose_in_second_13w
+FROM
+
+(#Prescriptions starting + ending within the fifth 13 weeks
+SELECT
+person_id,
+total_pred_dose
+
+FROM 
+
+(SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    daily_pred_dose,
+    (daily_pred_dose * duration_in_days) AS total_pred_dose -- number of days x daily pred dose gives total pred dose
+
+FROM 
+(SELECT 
+        person_id,
+        diagnosis,
+        GCAPMR_date_of_diagnosis,
+        datemedicationstart,
+        DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,-- calculated like this as originally duration_in_days was calculated by difference in datemedicationstart between two prescriptions for some
+        duration_in_days,
+        name_of_medication,
+        number_of_tablets,
+        medicationquantity,
+        medicationdosage,
+        
+#Tablets per day multiplied by the equivalence dose to prednisolone 1mg gives daily dose
+        (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+
+
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+
+)
+
+WHERE
+    datemedicationstart >= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 52 WEEK) -- select prescriptions starting on or after date 52 weeks after diagnosis
+    AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 65 WEEK) -- select prescriptions ending within the fifth 13 week interval
+)
+
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+
+FROM
+
+(#Prescriptions starting but not ending within fifth 13 weeks
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+ duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+    daily_pred_dose,
+    
+#Calculate the dose received between 52 and 65 weeks
+    CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 65 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose AS total_pred_dose
+
+FROM (
+    SELECT *
+    FROM (
+        SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+            number_of_tablets,
+            medicationquantity,
+     medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+        
+            FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+            
+    )
+    WHERE
+        datemedicationstart >= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 52 WEEK)
+        AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 65 WEEK)
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 65 WEEK)
+)
+)
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+
+FROM 
+
+(
+#Prescriptions starting within fifth 13 weeks but ending with within sixth 13 weeks or later
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+    daily_pred_dose,
+    
+    -- Calculate the dose received between 52 and 65 weeks
+    CASE
+        WHEN datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 65 WEEK)
+        THEN CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 65 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose
+        ELSE duration_in_days * daily_pred_dose
+    END AS total_pred_dose
+
+FROM (
+    SELECT *
+    FROM (
+        SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+            number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+        
+            FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+            
+    )
+    WHERE
+        datemedicationstart >= GCAPMR_date_of_diagnosis -- Include prescriptions that start on or after the diagnosis date
+        AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 52 WEEK) -- Include prescriptions that start within 52 weeks of the diagnosis date
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 52 WEEK) -- Include prescriptions that end after the 52-week mark from the diagnosis date
+        AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 65 WEEK) -- Include prescriptions that end within the 52-65 week period from the diagnosis date
+))
+
+)
+
+GROUP BY person_id)
+
+
+********
+
+
+#Sixth 13 weeks
+
+SELECT 
+--Median + mean
+
+#PERCENTILE_CONT(total_dose_in_second_13w, 0.5) OVER() AS median
+AVG(total_dose_in_second_13w) as mean
+
+FROM
+
+(SELECT 
+person_id,
+
+#Add up total_pred_doses from two UNION ALL tables (prescriptions that start+end within 13 weeks and prescriptions that start+do not end within 13 weeks)
+SUM(total_pred_dose) as total_dose_in_second_13w
+
+FROM
+
+(#Prescriptions starting + ending within the sixth 13 weeks
+SELECT
+person_id,
+total_pred_dose
+
+FROM 
+
+(SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    daily_pred_dose,
+    (daily_pred_dose * duration_in_days) AS total_pred_dose -- number of days x daily pred dose gives total pred dose
+FROM 
+(SELECT 
+        person_id,
+        diagnosis,
+        GCAPMR_date_of_diagnosis,
+        datemedicationstart,
+        DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,-- calculated like this as originally duration_in_days was calculated by difference in datemedicationstart between two prescriptions for some
+        duration_in_days,
+        name_of_medication,
+        number_of_tablets,
+        medicationquantity,
+        medicationdosage,
+        
+#Tablets per day multiplied by the equivalence dose to prednisolone 1mg gives daily dose
+        (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+
+)
+
+WHERE
+    datemedicationstart >= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 65 WEEK) -- select prescriptions starting on or after date 65 weeks after diagnosis
+    AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 78 WEEK) -- select prescriptions ending within the sixth 13 week interval
+)
+
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+
+FROM
+
+(#Prescriptions starting but not ending within sixth 13 weeks
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+    daily_pred_dose,
+    
+#Calculate the dose received between 65-78 weeks
+    CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 78 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose AS total_pred_dose
+
+FROM (
+    SELECT *
+    FROM (
+ SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+            number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+        
+            FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+ )
+    WHERE
+        datemedicationstart >= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 65 WEEK)
+        AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 78 WEEK)
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 78 WEEK)
+)
+)
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+
+FROM 
+
+(
+#Prescriptions starting within sixth 13 weeks but ending within seventh 13 weeks or later
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+    daily_pred_dose,
+    
+    -- Calculate the dose received between 65-78 weeks
+    CASE
+        WHEN datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 78 WEEK)
+        THEN CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 78 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose
+        ELSE duration_in_days * daily_pred_dose
+    END AS total_pred_dose
+
+FROM (
+    SELECT *
+    FROM (
+       SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+            number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+        
+            FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+            
+    )
+    WHERE
+        datemedicationstart >= GCAPMR_date_of_diagnosis -- Include prescriptions that start on or after the diagnosis date
+        AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 65 WEEK) -- Include prescriptions that start within 65 weeks of the diagnosis date
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 65 WEEK) -- Include prescriptions that end after the 65-week mark from the diagnosis date
+        AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 78 WEEK) -- Include prescriptions that end within the 65-78 week period from the diagnosis date
+))
+
+)
+
+GROUP BY person_id)
+
+**********
+#Seventh 13 weeks
+
+#Seventh 13 weeks
+
+SELECT 
+--Median + mean
+
+#PERCENTILE_CONT(total_dose_in_second_13w, 0.5) OVER() AS median
+AVG(total_dose_in_second_13w) as mean
+FROM
+
+(SELECT 
+person_id,
+
+#Add up total_pred_doses from two UNION ALL tables (prescriptions that start+end within 13 weeks and prescriptions that start+do not end within 13 weeks)
+SUM(total_pred_dose) as total_dose_in_second_13w
+
+FROM
+
+(#Prescriptions starting + ending within the seventh 13 weeks
+SELECT
+person_id,
+total_pred_dose
+
+FROM 
+
+(SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    daily_pred_dose,
+    (daily_pred_dose * duration_in_days) AS total_pred_dose -- number of days x daily pred dose gives total pred dose
+
+FROM 
+(SELECT 
+        person_id,
+        diagnosis,
+        GCAPMR_date_of_diagnosis,
+        datemedicationstart,
+        DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,-- calculated like this as originally duration_in_days was calculated by difference in datemedicationstart between two prescriptions for some
+        duration_in_days,
+        name_of_medication,
+        number_of_tablets,
+        medicationquantity,
+        medicationdosage,
+#Tablets per day multiplied by the equivalence dose to prednisolone 1mg gives daily dose
+        (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+
+
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+
+)
+
+WHERE
+    datemedicationstart > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 78 WEEK) -- select prescriptions starting on or after date 78 weeks after diagnosis
+    AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 91 WEEK) -- select prescriptions ending within the seventh 13 week interval
+)
+
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+FROM
+
+(#Prescriptions starting but not ending within seventh 13 weeks
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+    daily_pred_dose,
+    
+#Calculate the dose received between 78-91 weeks
+    CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 91 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose AS total_pred_dose
+
+FROM (
+    SELECT *
+    FROM (
+        SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+            number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+        
+            FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+           
+    )
+    WHERE
+        datemedicationstart > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 78 WEEK)
+        AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 91 WEEK)
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 91 WEEK)
+)
+)
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+
+FROM 
+
+(
+#Prescriptions starting within seventh 13 weeks but ending within eight 13 weeks or later
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+    daily_pred_dose,
+    
+    -- Calculate the dose received between 78-91 weeks
+    CASE
+        WHEN datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 91 WEEK)
+        THEN CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 91 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose
+        ELSE duration_in_days * daily_pred_dose
+    END AS total_pred_dose
+
+FROM (
+ SELECT *
+    FROM (
+        SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+            number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+        FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+           
+    )
+    WHERE
+        datemedicationstart >= GCAPMR_date_of_diagnosis -- Include prescriptions that start on or after the diagnosis date
+        AND datemedicationstart < DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 78 WEEK) -- Include prescriptions that start within 78 weeks of the diagnosis date
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 78 WEEK) -- Include prescriptions that end after the 78-week mark from the diagnosis date
+        AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 91 WEEK) -- Include prescriptions that end within the 78-91 week period from the diagnosis date
+))
+
+)
+
+GROUP BY person_id)
+
+
+
+
+
+*************
+
+#Eight 13 weeks
+
+SELECT 
+--Median + mean
+
+#PERCENTILE_CONT(total_dose_in_second_13w, 0.5) OVER() AS median
+AVG(total_dose_in_second_13w) as mean
+
+FROM
+
+(SELECT 
+person_id,
+
+#Add up total_pred_doses from two UNION ALL tables (prescriptions that start+end within 13 weeks and prescriptions that start+do not end within 13 weeks)
+SUM(total_pred_dose) as total_dose_in_second_13w
+
+FROM
+
+(#Prescriptions starting + ending within the eighth 13 weeks
+SELECT
+person_id,
+total_pred_dose
+
+FROM 
+
+(SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    daily_pred_dose,
+    (daily_pred_dose * duration_in_days) AS total_pred_dose -- number of days x daily pred dose gives total pred dose
+
+FROM 
+(SELECT 
+        person_id,
+        diagnosis,
+        GCAPMR_date_of_diagnosis,
+        datemedicationstart,
+        DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,-- calculated like this as originally duration_in_days was calculated by difference in datemedicationstart between two prescriptions for some
+        duration_in_days,
+        name_of_medication,
+        number_of_tablets,
+        medicationquantity,
+        medicationdosage,
+        
+#Tablets per day multiplied by the equivalence dose to prednisolone 1mg gives daily dose
+        (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+
+
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+
+)
+
+WHERE
+    datemedicationstart >= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 91 WEEK) -- select prescriptions starting on or after date 91 weeks after diagnosis
+    AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 104 WEEK) -- select prescriptions ending within the eighth 13 week interval
+)
+
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+
+FROM
+
+(#Prescriptions starting but not ending within eighth 13 weeks
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+    daily_pred_dose,
+    
+#Calculate the dose received between 91-104 weeks
+    CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 104 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose AS total_pred_dose
+
+FROM (
+    SELECT *
+    FROM (
+        SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+            number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+      
+            FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+            
+    )
+    WHERE
+        datemedicationstart >= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 91 WEEK)
+        AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 104 WEEK)
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 104 WEEK)
+)
+)
+
+UNION ALL
+
+SELECT 
+person_id,
+total_pred_dose
+
+FROM 
+
+(
+#Prescriptions starting within eighth 13 weeks but ending within tenth 13 weeks or later
+SELECT
+    person_id,
+    diagnosis,
+    GCAPMR_date_of_diagnosis,
+    datemedicationstart,
+    datemedicationend,
+    duration_in_days,
+    name_of_medication,
+    number_of_tablets,
+    medicationquantity,
+    medicationdosage,
+    daily_pred_dose,
+    
+    -- Calculate the dose received between 91-104 weeks
+    CASE
+        WHEN datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 104 WEEK)
+        THEN CAST(DATE_DIFF(DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 104 WEEK), datemedicationstart, DAY) + 1 AS INT64) * daily_pred_dose
+        ELSE duration_in_days * daily_pred_dose
+    END AS total_pred_dose
+
+FROM (
+    SELECT *
+    FROM (
+        SELECT
+            person_id,
+            diagnosis,
+            GCAPMR_date_of_diagnosis,
+            datemedicationstart,
+            DATE_ADD(datemedicationstart, INTERVAL duration_in_days DAY) AS datemedicationend,
+            duration_in_days,
+            name_of_medication,
+            number_of_tablets,
+            medicationquantity,
+            medicationdosage,
+            (number_of_tablets / duration_in_days) * equivalence_dose_to_pred1mg AS daily_pred_dose
+        
+            FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.final_combined_steroid_conversions
+           
+    )
+    WHERE
+        datemedicationstart >= GCAPMR_date_of_diagnosis -- Include prescriptions that start on or after the diagnosis date
+        AND datemedicationstart <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 91 WEEK) -- Include prescriptions that start within 91 weeks of the diagnosis date
+        AND datemedicationend > DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 91 WEEK) -- Include prescriptions that end after the 91-week mark from the diagnosis date
+        AND datemedicationend <= DATE_ADD(GCAPMR_date_of_diagnosis, INTERVAL 104 WEEK) -- Include prescriptions that end within the 91-104 week period from the diagnosis date
+))
+
+)
+
+GROUP BY person_id)
