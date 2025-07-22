@@ -1,0 +1,3069 @@
+
+#QRISK
+SELECT
+  a.person_id,
+  l.gender,
+  a.Age_GCAPMR_Diagnosis as age,
+  g.atrial_fibrillation,
+  j.atypical_antipsycotics as atypical_antipsy,
+  k.steroid_tablets as regular_steroid_tablets,
+  n.erectile_disfunction,
+  o.migraines as migraine,
+  e.rheumatoid_arthritis,
+  f.chronic_kidney_disease,
+  h.severe_mental_illness,
+  i.systemic_lupus_erythematosus,
+  q.blood_pressure_treatment,
+  d.diabetes1,
+  m.diabetes2,
+  p.weight,
+  p.height,
+  b.ethnicity,
+  r.heart_attack_relative,
+  s.tc_hdl_ratio as cholesterol_HDL_ratio,
+  t.closest_systolic as systolic_blood_pressure, 
+  u.st_dev_systolic as std_systolic_blood_pressure,
+  v.TDS as townsend,
+  c.smoking_status as smoke
+
+FROM
+  yhcr-prd-phm-bia-core.CB_1745.PMR_GCA_Cohort a
+
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ethnicity_QRISK b ON a.person_id = b.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.smoking_status_QRISK c ON a.person_id = c.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.diabetes1_QRISK d ON a.person_id = d.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ra_QRISK e ON a.person_id = e.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ckd_QRISK f ON a.person_id = f.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_QRISK g ON a.person_id = g.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.severe_mental_illness_QRISK h ON a.person_id = h.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.sle_QRISK i ON a.person_id = i.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.atypical_antipsycotics_QRISK j ON a.person_id = j.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_tablets_QRISK k ON a.person_id = k.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.gender_QRISK l ON a.person_id = l.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.diabetes2_QRISK m ON a.person_id = m.person_id
+INNER JOIN 
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ed_QRISK n ON a.person_id = n.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.migraines_QRISK o ON a.person_id = o.person_id
+INNER JOIN 
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_accurr_3 p ON a.person_id = p.person_id
+INNER JOIN 
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.blood_pressure_treatment_QRISK q ON a.person_id = q.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.fam_hx_mi_QRISK r ON a.person_id = r.person_id
+INNER JOIN
+ yhcr-prd-phm-bia-core.CB_MYSPACE_KF.tc_hdl_ratio_QRISK s ON a.person_id = s.person_id
+INNER JOIN
+ yhcr-prd-phm-bia-core.CB_1745.For_Kat_GCAPMR_Closest_BP t ON a.person_id = t.person_id
+INNER JOIN
+yhcr-prd-phm-bia-core.CB_1745.For_Kat_GCAPMR_BPSTDEV u ON a.person_id = u.person_id
+INNER JOIN 
+yhcr-prd-phm-bia-core.CB_MYSPACE_KF.townsend_QRISK v ON a.person_id = v.person_id
+
+
+
+****
+#1. Ethnicity
+
+
+SELECT
+person_id,
+  CASE
+    WHEN Ethnic_Group = 'White: any other White background - England and Wales ethnic category 2011 census' THEN 1
+        WHEN Ethnic_Group = 'White' THEN 1
+        WHEN Ethnic_Group = 'Unknown' THEN 1
+        WHEN Ethnic_Group = 'White: Irish - England and Wales ethnic category 2011 census' THEN 1
+        WHEN Ethnic_Group = 'White: English or Welsh or Scottish or Northern Irish or British - England and Wales ethnic category 2011 census' THEN 1
+        WHEN Ethnic_Group = 'Indian/British Indian' THEN 2
+        WHEN Ethnic_Group = 'Asian or Asian British: Indian - England and Wales ethnic category 2011 census' THEN 2
+        WHEN Ethnic_Group = 'Pakistani' THEN 3
+        WHEN Ethnic_Group = 'Asian or Asian British: Pakistani - England and Wales ethnic category 2011 census' THEN 3
+        WHEN Ethnic_Group = 'Bangladeshi' THEN 4
+        WHEN Ethnic_Group = 'Asian or Asian British: Bangladeshi - England and Wales ethnic category 2011 census' THEN 4
+        WHEN Ethnic_Group = 'Other Asian' THEN 5
+        WHEN Ethnic_Group = 'Asian or Asian British: any other Asian background - England and Wales ethnic category 2011 census' THEN 5
+        WHEN Ethnic_Group = 'Mixed multiple ethnic groups: White and Asian - England and Wales ethnic category 2011 census' THEN 5
+        WHEN Ethnic_Group = 'Mixed multiple ethnic groups: White and Black Caribbean - England and Wales ethnic category 2011 census' THEN 6
+        WHEN Ethnic_Group = 'Black or African or Caribbean or Black British: Caribbean - England and Wales ethnic category 2011 census' THEN 6
+        WHEN Ethnic_Group = 'Mixed multiple ethnic groups: White and Black African - England and Wales ethnic category 2011 census' THEN 7
+        WHEN Ethnic_Group = 'Black or African or Caribbean or Black British: other Black or African or Caribbean background - England and Wales ethnic category 2011 census' THEN 7
+        WHEN Ethnic_Group = 'Black or African or Caribbean or Black British: African - England and Wales ethnic category 2011 census' THEN 7
+        WHEN Ethnic_Group = 'Asian or Asian British: Chinese - England and Wales ethnic category 2011 census' THEN 8
+        WHEN Ethnic_Group = 'Other/mixed' THEN 9
+        WHEN Ethnic_Group = 'Latin American' THEN 9
+    ELSE NULL
+  END AS ethnicity
+FROM
+(With People AS 
+
+(
+
+
+WITH SR_Ethnicity AS
+(With SR_Patient_Prep AS (
+
+#STEP 1
+#Sr patient has multiple ethnicity values per person.
+# get rid of the missings so that next you can select randomly from the non missing values for each person
+
+SELECT DISTINCT person_id, ethnicity
+FROM `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srpatient`
+WHERE ethnicity != "Ethnic category - 2011 census England and Wales"  
+  AND ethnicity != "O/E - ethnic group NOS"  
+  AND ethnicity != "O/E - ethnic group"  
+  AND ethnicity != "Ethnic groups (census) NOS"  
+  AND ethnicity != "Not specified - JDB" 
+  AND ethnicity != "Ethnic groups (census)" 
+  AND ethnicity != "Ethnic category - 2001 census"
+  AND ethnicity != "Ethnic category not stated - 2001 census"
+  AND ethnicity != "Ethnicity and other related nationality data"
+  AND ethnicity != "Other Mixed background - ethnic category 2001 census"
+  AND ethnicity != "Other ethnic non-mixed (NMO)"
+  AND ethnicity != "Other ethnic group"
+  AND ethnicity != "Other ethnic mixed origin")
+
+
+#STEP 2
+#Extract person ID and ethnicity from sr patient prep
+
+#Note that I have picked a random code where people have multiple ones (think more ideal would be to pick most recent but I couldn’t see a time variable!)
+
+#Also note I found the select row thing by googling- 90% sure it does what I think it does…
+
+SELECT person_id , ethnicity,
+
+FROM (
+
+    SELECT ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY RAND()) AS row_num,
+
+        person_id, ethnicity
+
+    FROM  SR_Patient_Prep
+
+) AS T
+
+WHERE row_num = 1)
+
+
+#STEP 3
+#So now I’m matching up the ethnicity codes from the person table to my cohort of people
+#The person table only has concept id’s. I mapped these to CB_CDM_Vocab with domain_id = 'race'
+#This should give you 2 variables- one is ethnicity from the person table, one is ethnicity from the sr patient table (next steps below are to merge them)
+
+SELECT a.person_id,
+
+  b.ethnicity_concept_id,
+
+  c.concept_name as _Ethnic_Group_Person_Table,
+
+  d.Ethnicity as Ethnicity_SR_Table,
+
+FROM `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` as a
+
+LEFT JOIN  `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.person` as b
+
+on a.person_id=b.person_id
+
+LEFT JOIN (SELECT 
+*
+FROM yhcr-prd-phm-bia-core.CB_CDM_VOCAB.concept
+WHERE  domain_id = 'Race') as c
+
+on b.ethnicity_concept_id=c.concept_id
+
+Left JOIN SR_Ethnicity as d
+
+on a.person_id=d.person_id
+
+ 
+
+ 
+)
+
+
+
+
+#STEP 5
+#Now make a new variable called ethnic group that is the person table ethnicity when its not missing
+#When the person table has missing ethnicity, use the Sr patient table ethnicity- recoded into ethnic groups
+
+
+SELECT
+  person_id,
+  ethnicity_concept_id,
+  _Ethnic_Group_Person_Table,
+  Ethnicity_SR_Table,
+  CASE
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Ethnic groups (census) NOS" THEN "Unknown"
+    WHEN _Ethnic_Group_Person_Table = "Mixed multiple ethnic groups: any other Mixed or multiple ethnic background - England and Wales ethnic category 2011 census" AND Ethnicity_SR_Table = "Other mixed White - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table IS NULL THEN "Unknown"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "White British - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "White:Eng/Welsh/Scot/NI/Brit - England and Wales 2011 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "White British" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Indian or British Indian - ethnic category 2001 census" THEN "Indian/British Indian"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "British or mixed British - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Polish - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Other ethnic Asian/White orig" THEN "Other Asian"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Other White background - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Bangladeshi" THEN "Bangladeshi"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "White Irish" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "White - ethnic group" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "English - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Pakistani or British Pakistani - ethnic category 2001 census" THEN "Pakistani"
+    WHEN _Ethnic_Group_Person_Table = "Other ethnic group: any other ethnic group - England and Wales ethnic category 2011 census" AND Ethnicity_SR_Table = "Other ethnic group" THEN "Unknown"
+     WHEN _Ethnic_Group_Person_Table = "Other ethnic group: any other ethnic group - England and Wales ethnic category 2011 census" AND Ethnicity_SR_Table IS NULL THEN "Other/mixed"
+     WHEN _Ethnic_Group_Person_Table = "Mixed multiple ethnic groups: any other Mixed or multiple ethnic background - England and Wales ethnic category 2011 census" AND Ethnicity_SR_Table IS NULL THEN "Other/mixed"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Irish - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Other ethnic group: any other ethnic group - England and Wales ethnic category 2011 census" AND Ethnicity_SR_Table = "Latin American - ethnic category 2001 census" THEN "Latin American"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Asian - ethnic group" THEN "Other Asian"
+    WHEN _Ethnic_Group_Person_Table = "Other ethnic group: any other ethnic group - England and Wales ethnic category 2011 census" AND Ethnicity_SR_Table = "O/E - ethnic group" THEN "Unknown"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Pakistani" THEN "Pakistani"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Other ethnic group" THEN "Unknown"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Asian/Asian British:Pakistani- Eng+Wales eth cat 2011 census" THEN "Pakistani"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "White Irish - ethnic category 2001 census" THEN "White"
+    WHEN _Ethnic_Group_Person_Table = "Other ethnic group: any other ethnic group - England and Wales ethnic category 2011 census" AND Ethnicity_SR_Table = "Other ethnic: any other grp - Eng+Wales eth cat 2011 census" THEN "Other/mixed"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Asian/Asian Brit: other Asian- Eng+Wales eth cat 2011 census" THEN "Other Asian"
+    WHEN _Ethnic_Group_Person_Table = "Other ethnic group: any other ethnic group - England and Wales ethnic category 2011 census" AND Ethnicity_SR_Table IS NULL THEN "Unknown"
+    WHEN _Ethnic_Group_Person_Table = "Unknown" AND Ethnicity_SR_Table = "Other Asian background - ethnic category 2001 census" THEN "Other Asian"
+    ELSE _Ethnic_Group_Person_Table
+  END AS Ethnic_Group
+FROM People)
+
+ 
+
+
+#2. Smoking status
+
+SELECT
+  a.person_id,
+  CASE
+    WHEN a.smoking_status IN ('Smoker', 'Cigarette consumption (observable entity)', '[Tobacco consumption] or [smoker - amount smoked]', 'Smoking cessation drug therapy declined', 'Smoking effects education (procedure)', 'Smoking cessation programme start date', 'Tobacco consumption NOS', 'Referral to stop-smoking clinic (procedure)', 'Wants to stop smoking', 'Cigar consumption (observable entity)', 'Smoking cessation programme declined', 'Smoking monitoring invitation (procedure)', 'Trying to give up smoking (finding)', 'Light cigarette smoker (1-9 cigs/day)', 'Cigarette smoker', 'Tobacco smoking consumption', 'Trying to give up smoking', 'Tobacco smoking consumption (observable entity)', 'Smoker (& cigarette)', 'Thinking about stopping smoking', 'Cigar consumption', 'Smoking cessation milestones (observable entity)', 'Tobacco use and exposure (observable entity)', 'Cigarette consumption', 'Ready to stop smoking', 'Referral to smoking cessation advisor (procedure)', 'Brief intervention for smoking cessation', 'Smoking cessation drug therapy (regime/therapy)', 'Stop smoking monitoring verbal invite (procedure)', 'Attends stop smoking monitoring (finding)', 'Smoking cessation education (procedure)') THEN 3
+    WHEN a.smoking_status IN ('Non-smoker (& [never smoked tobacco])', 'Smoking status at 4 weeks (observable entity)', 'Never smoked tobacco', 'Smoking monitoring status (finding)', 'Excepted from smoking quality indicators: Patient unsuitable', 'Current non-smoker', 'missing', 'Non-smoker', 'Excepted from smoking quality indicators: Informed dissent') THEN 1
+    WHEN a.smoking_status IN ('Stopped smoking', 'Ex-smoker - amount unknown', 'Ex-smoker', 'Ex-cigar smoker (finding)', 'Ex-moderate cigarette smoker (10-19/day) (finding)', 'Ex-pipe smoker (finding)', 'Ex-cigarette smoker', 'Ex-trivial cigarette smoker (<1/day) (finding)', '[V]Personal history of tobacco abuse', 'Ex-heavy cigarette smoker (20-39/day) (finding)', 'Ex-very heavy cigarette smoker (40+/day) (finding)', 'Ex-light cigarette smoker (1-9/day) (finding)', 'Ex-cigarette smoker (finding)', 'Ex-trivial smoker (<1/day)', 'Stop smoking monitoring check done (finding)') THEN 2
+    WHEN a.smoking_status IN ('Stop smoking monitoring telephone invite (procedure)', 'Moderate cigarette smoker (10-19 cigs/day)') THEN 4
+    WHEN a.smoking_status IN ('Heavy cigarette smoker (20-39 cigs/day)') THEN 5
+    ELSE NULL
+  END AS smoking_status
+
+FROM 
+#smoking status code in comorbidities
+yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_23_07 a;
+
+
+
+
+#3. Diabetes
+- for diabetes unknown, assumed T2DM as 97% of cohort has t2dm based on known figures
+
+SELECT 
+person_id, diabetes
+FROM 
+(WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T1DM_ctv3` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T1DM_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+    AND a.person_id NOT IN (13057852, 13560199, 12984152)
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text,
+  1 AS diabetes
+FROM
+  JoinedData
+WHERE
+  rn = 1)
+
+  UNION ALL 
+ 
+
+SELECT 
+person_id, diabetes
+FROM 
+(#T2DM
+WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T2DM_ctv3` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T2DM_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+    AND a.person_id NOT IN (13057852, 13560199, 12984152)
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  ctv3text,
+  2 AS diabetes
+FROM
+  JoinedData
+WHERE
+  rn = 1)
+
+UNION ALL 
+ 
+
+SELECT 
+person_id, constant_value as diabetes
+
+FROM 
+
+(-- First subquery: Convert CTV3 codes to SNOMED codes
+WITH CTV3ToSnomed AS (
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.diabetes_type_unknown_ctv3` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+),
+
+-- Second subquery: Deduplicate the SNOMED codes
+DeduplicatedSnomed AS (
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+-- Third subquery: Join with final cohort and primary care table, selecting the latest ctv3text for each person_id
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed ds
+  ON
+    b.snomedcode = ds.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id, the first ctv3text, and add a constant column with value 2
+SELECT
+  person_id,
+  ctv3text,
+  2 AS constant_value
+FROM
+  JoinedData
+WHERE
+  rn = 1
+  AND person_id NOT IN (
+    SELECT person_id FROM
+
+    (SELECT * FROM
+
+    (WITH CTV3ToSnomed AS (
+      -- First query - converts ctv3 codes to snomed codes
+      SELECT
+        CAST(a.SCT_CONCEPTID AS STRING) AS code,
+        b.string_field_1 AS term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+      JOIN
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T1DM_ctv3` b
+      ON
+        b.string_field_0 = a.CTV3_CONCEPTID
+      UNION ALL
+      -- Second query - cast snomed code as string
+      SELECT
+        CAST(code AS STRING) AS code,
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T1DM_codes`
+    ),
+
+    DeduplicatedSnomed AS (
+      -- Fourth query - deduplicate, only selecting one unique snomed code
+      SELECT
+        code,
+        ANY_VALUE(term) AS term
+      FROM
+        CTV3ToSnomed
+      GROUP BY
+        code
+    ),
+
+    JoinedData AS (
+      SELECT
+        a.person_id,
+        b.ctv3text,
+        ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+      FROM
+        `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+      JOIN
+        `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+      ON
+        a.person_id = b.person_id
+      JOIN
+        DeduplicatedSnomed c
+      ON
+        b.snomedcode = c.code
+      WHERE
+        b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+        AND a.person_id NOT IN (13057852, 13560199, 12984152)
+    )
+
+    -- Final query: Select distinct person_id and the first ctv3text
+    SELECT
+      person_id,
+      ctv3text,
+      2 AS constant_value
+    FROM
+      JoinedData
+    WHERE
+      rn = 1
+    )
+
+    UNION ALL 
+
+    SELECT * 
+
+    FROM 
+
+    (WITH CTV3ToSnomed AS (
+      -- First query - converts ctv3 codes to snomed codes
+      SELECT
+        CAST(a.SCT_CONCEPTID AS STRING) AS code,
+        b.string_field_1 AS term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+      JOIN
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T2DM_ctv3` b
+      ON
+      b.string_field_0 = a.CTV3_CONCEPTID
+      UNION ALL
+      -- Second query - cast snomed code as string
+      SELECT
+        CAST(code AS STRING) AS code,
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.T2DM_codes`
+    ),
+
+    DeduplicatedSnomed AS (
+      -- Fourth query - deduplicate, only selecting one unique snomed code
+      SELECT
+        code,
+        ANY_VALUE(term) AS term
+      FROM
+        CTV3ToSnomed
+      GROUP BY
+        code
+    ),
+
+    JoinedData AS (
+      SELECT
+        a.person_id,
+        b.ctv3text,
+        ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+      FROM
+        `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+      JOIN
+        `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+      ON
+        a.person_id = b.person_id
+      JOIN
+        DeduplicatedSnomed c
+      ON
+        b.snomedcode = c.code
+      WHERE
+        b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+        AND a.person_id NOT IN (13057852, 13560199, 12984152)
+    )
+
+    -- Final query: Select distinct person_id and the first ctv3text
+    SELECT
+      person_id,
+      ctv3text,
+      2 AS diabetes
+    FROM
+      JoinedData
+    WHERE
+      rn = 1
+    )
+  )
+  )
+)
+
+
+#4. Rheumatoid arthritis
+
+-- Select all rows from table 1
+SELECT person_id, rheumatoid_arthritis
+FROM (WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ra_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ra_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  1 as rheumatoid_arthritis
+FROM
+  JoinedData
+WHERE
+  rn = 1
+) 
+
+UNION ALL
+
+-- Select person_ids from table 2 that are not in table 1
+SELECT person_id, 0 as rheumatoid_arthritis
+FROM `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids`
+
+WHERE person_id NOT IN 
+
+(SELECT person_id FROM 
+
+(WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ra_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ra_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  1 as rheumatoid_arthritis
+FROM
+  JoinedData
+WHERE
+  rn = 1
+))
+
+
+#5. CKD
+
+-- Select all rows from table 1
+SELECT person_id, chronic_kidney_disease
+FROM (WITH FilteredData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids  a
+  JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+
+  (SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    (SELECT 
+  CAST(code AS STRING) AS code, 
+  term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ckd_345_codes`)
+  GROUP BY
+code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis  -- Replace with the actual column names
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  1 as chronic_kidney_disease
+FROM
+  FilteredData
+WHERE
+  rn = 1)
+
+UNION ALL
+
+-- Select person_ids from table 2 that are not in table 1
+SELECT person_id, 0 as chronic_kidney_disease
+FROM `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids`
+
+WHERE person_id NOT IN 
+
+(SELECT person_id FROM 
+
+(WITH FilteredData AS (
+  SELECT
+    a.person_id,
+ b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids  a
+  JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+
+  (SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    (SELECT 
+  CAST(code AS STRING) AS code, 
+  term
+  FROM
+ `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ckd_345_codes`)
+  GROUP BY
+code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis  -- Replace with the actual column names
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  1 as chronic_kidney_disease
+FROM
+  FilteredData
+WHERE
+  rn = 1) )
+ 
+
+#5. Atrial fibrillation
+
+-- Select all rows from table 1
+SELECT person_id, atrial_fibrillation
+FROM (SELECT 
+person_id,
+1 as atrial_fibrillation
+
+FROM 
+
+(WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.tbl_srcode_start_date,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+ b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+),
+
+AFResolved AS (
+  WITH FilteredData AS (
+    SELECT
+      a.person_id,
+      b.ctv3text,
+      b.tbl_srcode_start_date,
+      ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+    FROM
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+    JOIN 
+      `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+    ON 
+      a.person_id = b.person_id
+    JOIN 
+      (SELECT
+        code,
+        ANY_VALUE(term) AS term
+      FROM
+        (SELECT 
+ CAST(code AS STRING) AS code, 
+          term
+        FROM
+          `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_resolved_codes`
+        UNION ALL
+        SELECT
+          CAST(a.SCT_CONCEPTID AS STRING) AS code,
+          b.string_field_1 AS term
+        FROM
+          `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+        JOIN
+          `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_resolved_ctv3` b
+        ON
+          b.string_field_0 = a.CTV3_CONCEPTID)
+      GROUP BY
+        code) c
+    ON 
+      b.snomedcode = c.code
+    WHERE 
+      b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+  )
+  SELECT
+person_id,
+    ctv3text,
+    tbl_srcode_start_date
+  FROM
+    FilteredData
+  WHERE
+    rn = 1
+)
+
+-- Final query
+SELECT
+  j.person_id,
+  j.ctv3text
+FROM
+  JoinedData j
+LEFT JOIN
+  AFResolved ar
+ON
+j.person_id = ar.person_id
+WHERE
+  j.rn = 1
+  AND (ar.person_id IS NULL OR j.tbl_srcode_start_date > ar.tbl_srcode_start_date) ))
+
+UNION ALL
+
+-- Select person_ids from table 2 that are not in table 1
+SELECT person_id, 0 as atrial_fibrillation
+FROM `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids`
+
+WHERE person_id NOT IN 
+
+(SELECT person_id FROM 
+
+(SELECT 
+person_id,
+1 as atrial_fibrillation
+
+FROM 
+
+(WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.tbl_srcode_start_date,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+ b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+),
+
+AFResolved AS (
+  WITH FilteredData AS (
+    SELECT
+      a.person_id,
+      b.ctv3text,
+      b.tbl_srcode_start_date,
+      ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+    FROM
+      yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+    JOIN 
+      `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+    ON 
+      a.person_id = b.person_id
+    JOIN 
+      (SELECT
+        code,
+        ANY_VALUE(term) AS term
+      FROM
+        (SELECT 
+ CAST(code AS STRING) AS code, 
+          term
+        FROM
+          `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_resolved_codes`
+        UNION ALL
+        SELECT
+          CAST(a.SCT_CONCEPTID AS STRING) AS code,
+          b.string_field_1 AS term
+        FROM
+          `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+        JOIN
+          `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_resolved_ctv3` b
+        ON
+          b.string_field_0 = a.CTV3_CONCEPTID)
+      GROUP BY
+        code) c
+    ON 
+      b.snomedcode = c.code
+    WHERE 
+      b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+  )
+  SELECT
+person_id,
+    ctv3text,
+    tbl_srcode_start_date
+  FROM
+    FilteredData
+  WHERE
+    rn = 1
+)
+
+-- Final query
+SELECT
+  j.person_id,
+  j.ctv3text
+FROM
+  JoinedData j
+LEFT JOIN
+  AFResolved ar
+ON
+j.person_id = ar.person_id
+WHERE
+  j.rn = 1
+  AND (ar.person_id IS NULL OR j.tbl_srcode_start_date > ar.tbl_srcode_start_date) ) ) )
+
+
+#6. Severe mental illness
+
+-- Select all rows from table 1
+SELECT person_id, severe_mental_illness
+FROM (SELECT person_id, 1 as severe_mental_illness
+
+FROM 
+(WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.serious_mt_ill_ctv3` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.serious_mt_illn_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.tbl_srcode_start_date,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+),
+
+AsthmaResolved AS (
+  WITH FilteredData AS (
+    SELECT
+      a.person_id,
+      b.ctv3text,
+      b.tbl_srcode_start_date,
+      ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+    FROM
+  yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+    JOIN 
+      `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+    ON 
+      a.person_id = b.person_id
+    JOIN 
+      (SELECT
+        code,
+        ANY_VALUE(term) AS term
+      FROM
+        (SELECT 
+          CAST(code AS STRING) AS code, 
+          term
+        FROM
+          `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.mhillness_resolved`)
+      GROUP BY
+        code) c
+    ON 
+      b.snomedcode = c.code
+    WHERE 
+      b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+  )
+ SELECT
+    person_id,
+    ctv3text,
+    tbl_srcode_start_date
+  FROM
+    FilteredData
+  WHERE
+    rn = 1
+)
+
+-- Final query
+SELECT
+  j.person_id,
+  j.ctv3text
+FROM
+  JoinedData j
+LEFT JOIN
+  AsthmaResolved ar
+ON
+  j.person_id = ar.person_id
+WHERE
+  j.rn = 1
+  AND (ar.person_id IS NULL OR j.tbl_srcode_start_date > ar.tbl_srcode_start_date) )
+)
+
+UNION ALL
+
+-- Select person_ids from table 2 that are not in table 1
+SELECT person_id, 0 as severe_mental_illness
+FROM `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids`
+
+WHERE person_id NOT IN 
+
+(SELECT person_id FROM 
+
+(SELECT person_id, 1 as severe_mental_illness
+
+FROM 
+(WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.serious_mt_ill_ctv3` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.serious_mt_illn_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.tbl_srcode_start_date,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+),
+
+AsthmaResolved AS (
+  WITH FilteredData AS (
+    SELECT
+      a.person_id,
+      b.ctv3text,
+      b.tbl_srcode_start_date,
+      ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+    FROM
+  yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+    JOIN 
+      `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+    ON 
+      a.person_id = b.person_id
+    JOIN 
+      (SELECT
+        code,
+        ANY_VALUE(term) AS term
+      FROM
+        (SELECT 
+          CAST(code AS STRING) AS code, 
+          term
+        FROM
+          `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.mhillness_resolved`)
+      GROUP BY
+        code) c
+    ON 
+      b.snomedcode = c.code
+    WHERE 
+      b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+  )
+ SELECT
+    person_id,
+    ctv3text,
+    tbl_srcode_start_date
+  FROM
+    FilteredData
+  WHERE
+    rn = 1
+)
+
+-- Final query
+SELECT
+  j.person_id,
+  j.ctv3text
+FROM
+  JoinedData j
+LEFT JOIN
+  AsthmaResolved ar
+ON
+  j.person_id = ar.person_id
+WHERE
+  j.rn = 1
+  AND (ar.person_id IS NULL OR j.tbl_srcode_start_date > ar.tbl_srcode_start_date) )
+ ) )
+
+#7. Atypical antipsychotics
+
+
+-- Select all rows from table 1
+SELECT person_id, atypical_antipsycotics
+FROM (SELECT DISTINCT a.person_id, 1 as atypical_antipsycotics
+
+FROM 
+
+(SELECT DISTINCT 
+person_id,
+nameofmedication,
+medicationdosage,
+medicationquantity,
+datemedicationstart,
+datemedicationend,
+tbl_srprimarycaremedication_end_date,
+rowidentifier,
+dateeventrecorded,
+dateevent,
+iddoneby,
+idorganisationdoneat,
+nameofmedication,
+issupervised,
+superviseddose,
+unsuperviseddose,
+isrepeatmedication,
+isothermedication,
+isdentalmedication,
+ishospitalmedication,
+idorganisation,
+idorganisationregisteredat
+
+FROM
+
+(SELECT 
+a.BNF_Code, 
+a.BNF_Name, 
+a.SNOMED_Code, 
+a.DMplusD_ProductDescription,
+a.Pack,
+
+b.person_id,
+b.tbl_srprimarycaremedication_start_date,
+b.tbl_srprimarycaremedication_end_date,
+b.rowidentifier,
+b.dateeventrecorded,
+b.dateevent,
+b.iddoneby,
+b.idorganisationdoneat,
+b.nameofmedication,
+b.datemedicationstart,
+b.datemedicationend,
+b.medicationdosage,
+b.medicationquantity,
+b.issupervised,
+b.superviseddose,
+b.unsuperviseddose,
+b.isrepeatmedication,
+b.isothermedication,
+b.isdentalmedication,
+b.ishospitalmedication,
+b.idorganisation,
+b.idorganisationregisteredat
+
+FROM 
+(SELECT 
+b.BNF_Code, b.BNF_Name, b.SNOMED_Code, b.DMplusD_ProductDescription,
+b.DMplusD__Product_and_PackDescription, b.Pack
+FROM (WITH RankedCodes AS (
+  SELECT 
+    code, 
+    term, 
+    dmd_id, 
+    dmd_type, 
+    bnf_code,
+    ROW_NUMBER() OVER (PARTITION BY bnf_code ORDER BY code) AS rn
+  FROM 
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.antipsychotic_codes`
+)
+SELECT 
+  code, 
+  term, 
+  dmd_id, 
+  dmd_type, 
+  bnf_code
+FROM 
+  RankedCodes
+WHERE 
+  rn = 1) a,
+`yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_BNF_DMD_SNOMED_lkp` b
+WHERE a.bnf_code = b.BNF_Code) a,
+`yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srprimarycaremedication` b
+
+WHERE a.DMplusD_ProductDescription = b.nameofmedication) ) a,
+
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b
+
+WHERE a.person_id = b.person_id)
+
+UNION ALL
+
+-- Select person_ids from table 2 that are not in table 1
+SELECT person_id, 0 as atypical_antipsycotics
+FROM `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids`
+
+WHERE person_id NOT IN 
+
+(SELECT person_id FROM 
+
+(SELECT DISTINCT a.person_id, 1 as atypical_antipsycotics
+
+FROM 
+
+(SELECT DISTINCT 
+person_id,
+nameofmedication,
+medicationdosage,
+medicationquantity,
+datemedicationstart,
+datemedicationend,
+tbl_srprimarycaremedication_end_date,
+rowidentifier,
+dateeventrecorded,
+dateevent,
+iddoneby,
+idorganisationdoneat,
+nameofmedication,
+issupervised,
+superviseddose,
+unsuperviseddose,
+isrepeatmedication,
+isothermedication,
+isdentalmedication,
+ishospitalmedication,
+idorganisation,
+idorganisationregisteredat
+
+FROM
+
+(SELECT 
+a.BNF_Code, 
+a.BNF_Name, 
+a.SNOMED_Code, 
+a.DMplusD_ProductDescription,
+a.Pack,
+
+b.person_id,
+b.tbl_srprimarycaremedication_start_date,
+b.tbl_srprimarycaremedication_end_date,
+b.rowidentifier,
+b.dateeventrecorded,
+b.dateevent,
+b.iddoneby,
+b.idorganisationdoneat,
+b.nameofmedication,
+b.datemedicationstart,
+b.datemedicationend,
+b.medicationdosage,
+b.medicationquantity,
+b.issupervised,
+b.superviseddose,
+b.unsuperviseddose,
+b.isrepeatmedication,
+b.isothermedication,
+b.isdentalmedication,
+b.ishospitalmedication,
+b.idorganisation,
+b.idorganisationregisteredat
+
+FROM 
+(SELECT 
+b.BNF_Code, b.BNF_Name, b.SNOMED_Code, b.DMplusD_ProductDescription,
+b.DMplusD__Product_and_PackDescription, b.Pack
+FROM (WITH RankedCodes AS (
+  SELECT 
+    code, 
+    term, 
+    dmd_id, 
+    dmd_type, 
+    bnf_code,
+    ROW_NUMBER() OVER (PARTITION BY bnf_code ORDER BY code) AS rn
+  FROM 
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.antipsychotic_codes`
+)
+SELECT 
+  code, 
+  term, 
+  dmd_id, 
+  dmd_type, 
+  bnf_code
+FROM 
+  RankedCodes
+WHERE 
+  rn = 1) a,
+`yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_BNF_DMD_SNOMED_lkp` b
+WHERE a.bnf_code = b.BNF_Code) a,
+`yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srprimarycaremedication` b
+
+WHERE a.DMplusD_ProductDescription = b.nameofmedication) ) a,
+
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b
+
+WHERE a.person_id = b.person_id) )
+
+
+#8. SLE
+
+
+-- Select all rows from table 1
+SELECT person_id, systemic_lupus_erythematosus
+FROM (WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.sle_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.sle_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  1 as systemic_lupus_erythematosus
+FROM
+  JoinedData
+WHERE
+  rn = 1
+) 
+
+UNION ALL
+
+-- Select person_ids from table 2 that are not in table 1
+SELECT person_id, 0 as systemic_lupus_erythematosus
+FROM `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids`
+
+WHERE person_id NOT IN 
+
+(SELECT person_id FROM 
+
+(WITH CTV3ToSnomed AS (
+  -- First query - converts ctv3 codes to snomed codes
+  SELECT
+    CAST(a.SCT_CONCEPTID AS STRING) AS code,
+    b.string_field_1 AS term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_CTV3ToSnomed_Map_2` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.sle_ctv3_codes` b
+  ON
+    b.string_field_0 = a.CTV3_CONCEPTID
+  UNION ALL
+  -- Second query - cast snomed code as string
+  SELECT
+    CAST(code AS STRING) AS code,
+    term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.sle_codes`
+),
+
+DeduplicatedSnomed AS (
+  -- Fourth query - deduplicate, only selecting one unique snomed code
+  SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    CTV3ToSnomed
+  GROUP BY
+    code
+),
+
+JoinedData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    DeduplicatedSnomed c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  1 as systemic_lupus_erythematosus
+FROM
+  JoinedData
+WHERE
+  rn = 1
+))
+
+#9. erectile disfunction
+#code from https://datacompass.lshtm.ac.uk/id/eprint/2804/
+
+-- Select all rows from table 1
+SELECT person_id, erectile_disfunction
+FROM (WITH FilteredData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids  a
+  JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+
+  (SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    (SELECT 
+  CAST(snomedctconceptid AS STRING) AS code, 
+  term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ed_codes`)
+  GROUP BY
+code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis  -- Replace with the actual column names
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  1 as erectile_disfunction
+FROM
+  FilteredData
+WHERE
+  rn = 1)
+
+UNION ALL
+
+-- Select person_ids from table 2 that are not in table 1
+SELECT person_id, 0 as erectile_disfunction
+FROM `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids`
+
+WHERE person_id NOT IN 
+
+(SELECT person_id FROM 
+
+(WITH FilteredData AS (
+  SELECT
+    a.person_id,
+ b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids  a
+  JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+
+  (SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    (SELECT 
+  CAST(snomedctconceptid AS STRING) AS code, 
+  term
+  FROM
+ `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ed_codes`)
+  GROUP BY
+code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis  -- Replace with the actual column names
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  1 as erectile_disfunction
+FROM
+  FilteredData
+WHERE
+  rn = 1) )
+
+#10. migraines
+
+-- Select all rows from table 1
+SELECT person_id, migraines
+FROM (WITH FilteredData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids  a
+  JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+
+  (SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    (SELECT 
+  CAST(code AS STRING) AS code, 
+  term
+  FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.migraines_codes`)
+  GROUP BY
+code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis  -- Replace with the actual column names
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  1 as migraines
+FROM
+  FilteredData
+WHERE
+  rn = 1)
+
+UNION ALL
+
+-- Select person_ids from table 2 that are not in table 1
+SELECT person_id, 0 as migraines
+FROM `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids`
+
+WHERE person_id NOT IN 
+
+(SELECT person_id FROM 
+
+(WITH FilteredData AS (
+  SELECT
+    a.person_id,
+ b.ctv3text,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY b.tbl_srcode_start_date DESC) AS rn
+  FROM
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids  a
+  JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON 
+    a.person_id = b.person_id
+  JOIN 
+
+  (SELECT
+    code,
+    ANY_VALUE(term) AS term
+  FROM
+    (SELECT 
+  CAST(code AS STRING) AS code, 
+  term
+  FROM
+ `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.migraines_codes`)
+  GROUP BY
+code) c
+  ON 
+    b.snomedcode = c.code
+  WHERE 
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis  -- Replace with the actual column names
+)
+
+-- Final query: Select distinct person_id and the first ctv3text
+SELECT
+  person_id,
+  1 as migraines
+FROM
+  FilteredData
+WHERE
+  rn = 1) )
+
+#11. Weight
+
+SELECT 
+person_id,
+ CAST (ROUND(weight) as INT64) as weight
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+      CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.weight_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as weight,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  weight > 16
+
+
+#12. Height
+
+SELECT
+  person_id,
+  CAST (ROUND(height * 100) as INT64) AS height
+
+FROM 
+(SELECT person_id, height
+
+FROM
+
+(WITH WeightData AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis,
+    ROW_NUMBER() OVER (PARTITION BY a.person_id ORDER BY ABS(DATE_DIFF(b.tbl_srcode_start_date, a.GCAPMR_date_of_diagnosis, DAY)) ASC) AS rn
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT
+      code,
+      ANY_VALUE(term) AS term
+    FROM
+      (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.height_codes`)
+    GROUP BY
+      code) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+)
+
+SELECT
+  person_id,
+  ctv3text,
+  CAST (numericvalue as FLOAT64) as height,
+  tbl_srcode_start_date
+FROM
+  WeightData
+WHERE
+  rn = 1)
+
+WHERE 
+  height NOT IN (-1, 0, 0.3357) )
+
+#13. Townsend/postcodes
+
+SELECT 
+a.person_id,
+b.postcode 
+
+FROM 
+(SELECT DISTINCT
+a.person_id,
+b.lsoa
+
+FROM 
+yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_person_lsoa b,
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+
+WHERE a.person_id = b.person_id) a,
+yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_bradford_map_prep b
+
+WHERE a.lsoa = b.LSOA_code
+
+
+#14. Cholesterol
+
+-- STEP 1: 
+
+#combined tc:hdl ratio from coded + calculated
+
+SELECT person_id, tc_hdl_ratio
+
+FROM
+
+(#tc + hdl ratio calculated + not present in coded tc/hdl ratio
+
+SELECT *
+FROM 
+(#TC:HDL ratio from total chol and hdl values
+SELECT
+a.person_id, a.hdl_chol, b.tot_chol, 
+b.tot_chol/a.hdl_chol as tc_hdl_ratio
+
+FROM
+
+(WITH HDL_data AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+    AND ctv3text IN ('Plasma HDL cholesterol level', 'Lipoprotein electroph. - HDL', 'Serum HDL cholesterol level')
+   
+),
+Ranked_HDL_data AS (
+  SELECT
+    person_id,
+    ctv3text,
+    CAST(numericvalue AS FLOAT64) AS hdl_chol,
+    tbl_srcode_start_date,
+    ROW_NUMBER() OVER (
+      PARTITION BY person_id 
+      ORDER BY tbl_srcode_start_date DESC
+    ) AS row_num
+  FROM
+    HDL_data
+  WHERE
+    CAST(numericvalue AS FLOAT64) > 0
+)
+SELECT
+  person_id,
+  ctv3text,
+  hdl_chol,
+  tbl_srcode_start_date
+FROM
+  Ranked_HDL_data
+WHERE
+  row_num = 1) a, 
+
+yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_total_chol_15_07 b
+
+WHERE a.person_id = b.person_id)
+
+WHERE person_id NOT IN
+
+(SELECT person_id FROM (-- Coded HDL/TC ratio
+WITH Chol_HDL_ratio_data AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue as tc_hdl_ratio,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+    AND b.ctv3text IN ('Total cholesterol:HDL ratio','Serum cholesterol/HDL ratio', 'Plasma cholesterol/HDL ratio')
+),
+Ranked_Chol_HDL_ratio_data AS (
+  SELECT
+    person_id,
+    ctv3text,
+    CAST(tc_hdl_ratio AS FLOAT64) AS tc_hdl_ratio,
+    tbl_srcode_start_date,
+    ROW_NUMBER() OVER (
+      PARTITION BY person_id 
+      ORDER BY tbl_srcode_start_date DESC
+    ) AS row_num
+  FROM
+    Chol_HDL_ratio_data
+  WHERE
+    CAST(tc_hdl_ratio AS FLOAT64) > 0
+)
+SELECT
+  person_id,
+  ctv3text,
+  tc_hdl_ratio,
+  tbl_srcode_start_date
+FROM
+  Ranked_Chol_HDL_ratio_data
+WHERE
+  row_num = 1
+ORDER BY
+  person_id, tbl_srcode_start_date DESC)
+
+))
+
+UNION ALL
+
+SELECT person_id, tc_hdl_ratio
+
+FROM 
+
+(
+-- Coded HDL/TC ratio
+WITH Chol_HDL_ratio_data AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue as tc_hdl_ratio,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+    AND b.ctv3text IN ('Total cholesterol:HDL ratio','Serum cholesterol/HDL ratio', 'Plasma cholesterol/HDL ratio')
+),
+Ranked_Chol_HDL_ratio_data AS (
+  SELECT
+    person_id,
+    ctv3text,
+    CAST(tc_hdl_ratio AS FLOAT64) AS tc_hdl_ratio,
+    tbl_srcode_start_date,
+    ROW_NUMBER() OVER (
+      PARTITION BY person_id 
+      ORDER BY tbl_srcode_start_date DESC
+    ) AS row_num
+  FROM
+    Chol_HDL_ratio_data
+  WHERE
+    CAST(tc_hdl_ratio AS FLOAT64) > 0
+)
+SELECT
+  person_id,
+  ctv3text,
+  tc_hdl_ratio,
+  tbl_srcode_start_date
+FROM
+  Ranked_Chol_HDL_ratio_data
+WHERE
+  row_num = 1
+ORDER BY
+  person_id, tbl_srcode_start_date DESC
+ )
+
+ UNION ALL 
+
+ SELECT 
+
+ person_id, tc_hdl_ratio
+
+ FROM 
+
+ (SELECT a.person_id, a.tot_chol, b.hdl_chol, a.tot_chol/b.hdl_chol as tc_hdl_ratio
+
+FROM 
+(SELECT * FROM
+
+(SELECT
+    a.person_id,
+    b.ctv3text,
+    5.5 as tot_chol,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+    AND (b.ctv3text LIKE '%Hyperlipid%' OR b.ctv3text LIKE '%hyperlipid%') )
+  
+WHERE person_id NOT IN
+(SELECT person_id FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_15_07) ) a,
+
+(WITH HDL_data AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+    AND ctv3text IN ('Plasma HDL cholesterol level', 'Lipoprotein electroph. - HDL', 'Serum HDL cholesterol level')
+   
+),
+Ranked_HDL_data AS (
+  SELECT
+    person_id,
+    ctv3text,
+    CAST(numericvalue AS FLOAT64) AS hdl_chol,
+    tbl_srcode_start_date,
+    ROW_NUMBER() OVER (
+      PARTITION BY person_id 
+      ORDER BY tbl_srcode_start_date DESC
+    ) AS row_num
+  FROM
+    HDL_data
+  WHERE
+    CAST(numericvalue AS FLOAT64) > 0
+)
+SELECT
+  person_id,
+  ctv3text,
+  hdl_chol,
+  tbl_srcode_start_date
+FROM
+  Ranked_HDL_data
+WHERE
+  row_num = 1 ) b
+
+WHERE a.person_id = b.person_id
+)
+
+ 
+
+ 
+-- STEP 2: UNIONED ALL with final cohort, giving 3 for ratio to those who did not have it and deduplicated (around 10)
+
+WITH tc_hdl_ratio_data AS (
+  SELECT 
+    person_id,
+    tc_hdl_ratio,
+    COUNT(*) OVER (PARTITION BY person_id) as ratio_count
+  FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_table_2_15_07
+)
+SELECT
+  person_id,
+  CASE 
+    WHEN ratio_count > 1 THEN AVG(tc_hdl_ratio)
+    ELSE MAX(tc_hdl_ratio)  -- or MIN(tc_hdl_ratio), they're the same when there's only one value
+  END AS tc_hdl_ratio
+FROM tc_hdl_ratio_data
+GROUP BY person_id, ratio_count
+
+
+**********
+# Lipid lowering drugs - hyperlipidemia
+
+SELECT DISTINCT person_id
+
+FROM
+(SELECT
+c.person_id,
+c.diagnosis,
+c.GCAPMR_date_of_diagnosis,
+d.nameofmedication,
+d.medicationdosage,
+d.medicationquantity,
+d.datemedicationstart,
+d.datemedicationend,
+d.tbl_srprimarycaremedication_start_date as prescription_date,
+d.tbl_srprimarycaremedication_end_date,
+d.rowidentifier,
+d.dateeventrecorded,
+d.dateevent,
+d.iddoneby,
+d.idorganisationdoneat,
+d.nameofmedication,
+d.issupervised,
+d.superviseddose,
+d.unsuperviseddose,
+d.isrepeatmedication,
+d.isothermedication,
+d.isdentalmedication,
+d.ishospitalmedication,
+d.idorganisation,
+d.idorganisationregisteredat
+
+
+FROM
+yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids c,
+
+(SELECT 
+a.code, 
+a.term, 
+a.bnf_code,
+
+b.person_id,
+b.tbl_srprimarycaremedication_start_date,
+b.tbl_srprimarycaremedication_end_date,
+b.rowidentifier,
+b.dateeventrecorded,
+b.dateevent,
+b.iddoneby,
+b.idorganisationdoneat,
+b.nameofmedication,
+b.datemedicationstart,
+b.datemedicationend,
+b.medicationdosage,
+b.medicationquantity,
+b.issupervised,
+b.superviseddose,
+b.unsuperviseddose,
+b.isrepeatmedication,
+b.isothermedication,
+b.isdentalmedication,
+b.ishospitalmedication,
+b.idorganisation,
+b.idorganisationregisteredat
+
+FROM 
+`yhcr-prd-phm-bia-core.CB_MYSPACE_KF.statin_cohort` a,
+`yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srprimarycaremedication` b
+
+WHERE a.term=b.nameofmedication) d
+
+WHERE 
+c.person_id = d.person_id
+AND datemedicationstart <= GCAPMR_date_of_diagnosis)
+
+
+*****
+#Calculating cholesterol - methodology (code not working)
+
+#Total chol data 1 with numerics - wildcard search
+##Total chol data 1 without numerics - 4.5 if normal, 5.5 if raised, 6.5 if very raised 
+#Total chol data 2 with numerics - coded search 
+#Total chol data 2 without numerics - same as 1 without numerics
+#Familial hypercholesterolemia - 5.5
+
+
+
+SELECT person_id, tot_chol
+
+FROM
+#Total chol data 2
+
+(WITH Tot_Chol_Data AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.total_ch_codes`) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+),
+Ranked_Tot_Chol_Data AS (
+  SELECT
+    person_id,
+    ctv3text,
+    CAST(numericvalue AS FLOAT64) AS tot_chol,
+    tbl_srcode_start_date,
+    ROW_NUMBER() OVER (
+      PARTITION BY person_id 
+      ORDER BY tbl_srcode_start_date DESC
+    ) AS row_num
+  FROM
+    Tot_Chol_Data
+  WHERE
+    CAST(numericvalue AS FLOAT64) > 0
+)
+SELECT
+  person_id,
+  ctv3text,
+  tot_chol,
+  tbl_srcode_start_date
+FROM
+  Ranked_Tot_Chol_Data
+WHERE
+  row_num = 1)
+
+  UNION ALL
+
+SELECT person_id, tot_chol
+
+FROM 
+(#Total chol data 1
+WITH Total_Chol_Data AS (
+  SELECT DISTINCT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+    AND (ctv3text LIKE '%Fasting cholesterol level%'
+    OR ctv3text LIKE '%Serum total cholesterol level%'
+    OR ctv3text LIKE '%Hypercholesterolaemia%'
+    OR ctv3text LIKE '%Lipid%'
+    OR ctv3text LIKE '%Other specified pure hypercholesterolaemia%'
+    OR ctv3text LIKE '%other specified pure hypercholesterolaemia%'
+    OR ctv3text LIKE '%Serum fasting total cholesterol%'
+    OR ctv3text LIKE 'sSerum fasting total cholesterol%'
+    OR ctv3text LIKE '%Serum lipids normal%'
+    OR ctv3text LIKE '%serum lipids normal%'
+    OR ctv3text LIKE '%Serum lipids high%'
+    OR ctv3text LIKE '%serum lipids high%'
+    OR ctv3text LIKE '%Serum cholesterol very high%'
+    OR ctv3text LIKE '%serum cholesterol very high%'
+    OR ctv3text LIKE '%Serum cholesterol normal%'
+    OR ctv3text LIKE '%serum cholesterol normal%'
+    OR ctv3text LIKE '%Serum lipids NOS%'
+    OR ctv3text LIKE '%Total cholesterol measurement%'
+    OR ctv3text LIKE '%total cholesterol measurement%'
+    OR ctv3text LIKE '%Serum cholesterol raised%'
+    OR ctv3text LIKE '%serum cholesterol raised%'
+    OR ctv3text LIKE '%Cholesterol%'
+    OR ctv3text LIKE '%cholesterol%'
+    OR ctv3text LIKE '%fasting cholesterol level%'
+    OR ctv3text LIKE '%hypercholesterolaemia%'
+    OR ctv3text LIKE '%lipid%')
+),
+Tot_Chol_Data AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.total_ch_codes`) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+),
+Filtered_Total_Chol_Data AS (
+  SELECT
+    person_id,
+    ctv3text,
+    CAST(numericvalue AS FLOAT64) as total_chol,
+    tbl_srcode_start_date
+  FROM
+    Total_Chol_Data
+  WHERE person_id NOT IN (
+    SELECT person_id 
+    FROM Tot_Chol_Data
+  )
+),
+Ranked_Total_Chol_Data AS (
+  SELECT 
+    *,
+    ROW_NUMBER() OVER (
+      PARTITION BY person_id 
+      ORDER BY tbl_srcode_start_date DESC
+    ) AS row_num
+  FROM Filtered_Total_Chol_Data
+)
+SELECT
+  person_id,
+  ctv3text,
+  total_chol as tot_chol,
+  tbl_srcode_start_date
+FROM Ranked_Total_Chol_Data
+WHERE row_num = 1
+  AND total_chol > 0
+  AND ctv3text NOT IN (
+    'Lipids, lipoproteins and related analytes',
+    'Blood sent for serum lipids',
+    'Lipids lipoproteins and related analytes',
+    'Total cholesterol:HDL ratio',
+    'High density lipoprotein/total cholesterol ratio',
+    'High density lipoprotein cholesterol',
+    'Lipid fractionation',
+    '(Serum HDL:non-HDL cholesterol ratio) or (HDL:LDL',
+    'Cholesterol/HDL ratio',
+    'Lipid keratopathy',
+    'FH: Hypercholesterolaemia in first degree relative',
+    'Serum HDL/non-HDL cholesterol ratio',
+    'Hypolipidaemia',
+    'FH: Raised blood lipids',
+    '(Serum HDL:non-HDL cholesterol ratio) or (HDL:LDL ratio)',
+    'Dietary cholesterol intake',
+    'Serum LDL cholesterol level',
+    'Serum non high density lipoprotein cholesterol lev',
+    'Calculated LDL cholesterol level',
+    'FH: Hypercholesterolaemia',
+    'Serum HDL cholesterol level',
+    'High density lipoprotein cholesterol level',
+    'Low density lipoprotein cholesterol level',
+    'Serum cholesterol/HDL ratio',
+    'Plasma LDL cholesterol level',
+    'Lipid lowering therapy not indicated',
+    'Plasma cholesterol/HDL ratio',
+    'Plasma HDL cholesterol level',
+    'Antiphospholipid syndrome',
+    'FH: Cholesterol high',
+    'Non high density lipoprotein cholesterol level'
+  ))
+
+UNION ALL 
+
+SELECT
+person_id, tot_chol
+
+FROM 
+(#Total chol data 1 without numerics
+SELECT * FROM 
+(WITH Tot_Chol_Data AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.total_ch_codes`) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+),
+Ranked_Tot_Chol_Data AS (
+  SELECT
+    person_id,
+    ctv3text,
+    CAST(numericvalue AS FLOAT64) AS tot_chol,
+    tbl_srcode_start_date,
+    ROW_NUMBER() OVER (
+      PARTITION BY person_id 
+      ORDER BY tbl_srcode_start_date DESC
+    ) AS row_num
+  FROM
+    Tot_Chol_Data
+  WHERE
+    CAST(numericvalue AS FLOAT64) <= 0
+)
+SELECT
+  person_id,
+  ctv3text,
+   CASE
+    WHEN ctv3text = 'Serum cholesterol normal' THEN 4.5
+    WHEN ctv3text = 'Serum cholesterol raised' THEN 5.5
+    WHEN ctv3text = 'Serum lipids high' THEN 5.5
+    WHEN ctv3text = 'Serum cholesterol very high' THEN 6.5
+    WHEN ctv3text = 'Hypercholesterolaemia' THEN 5.5
+    WHEN ctv3text = 'Serum lipids normal' THEN 4.5
+    ELSE NULL
+  END AS tot_chol
+  
+FROM
+  Ranked_Tot_Chol_Data
+WHERE
+  row_num = 1)
+
+  WHERE tot_chol IS NOT NULL)
+
+  UNION ALL 
+
+  SELECT person_id, tot_chol
+
+  FROM 
+  (#Total chol data 2 with numerics
+
+SELECT *
+FROM 
+(WITH Tot_Chol_Data AS (
+  SELECT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.total_ch_codes`) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis
+),
+Ranked_Tot_Chol_Data AS (
+  SELECT
+    person_id,
+    ctv3text,
+    CAST(numericvalue AS FLOAT64) AS tot_chol,
+    tbl_srcode_start_date,
+    ROW_NUMBER() OVER (
+      PARTITION BY person_id 
+      ORDER BY tbl_srcode_start_date DESC
+    ) AS row_num
+  FROM
+    Tot_Chol_Data
+  WHERE
+    CAST(numericvalue AS FLOAT64) <= 0
+)
+SELECT
+  person_id,
+  ctv3text,
+  CASE
+WHEN ctv3text = 'Serum cholesterol normal' THEN 4.5
+WHEN ctv3text = 'Serum cholesterol raised' THEN 5.5
+WHEN ctv3text = 'Serum lipids high' THEN 5.5
+WHEN ctv3text = 'Serum cholesterol very high' THEN 6.5
+WHEN ctv3text = 'Hypercholesterolaemia' THEN 5.5
+WHEN ctv3text = 'Serum lipids normal' THEN 4.5
+ELSE NULL
+END AS tot_chol
+  
+FROM
+  Ranked_Tot_Chol_Data
+WHERE
+  row_num = 1)
+
+  WHERE tot_chol IS NOT NULL
+)
+
+UNION ALL
+
+SELECT 
+person_id, tot_chol
+
+FROM 
+
+(#Familial hypercholesterolemia
+
+SELECT DISTINCT
+person_id,
+5.5 as tot_chol
+
+FROM
+
+(SELECT DISTINCT
+    a.person_id,
+    b.ctv3text,
+    b.numericvalue,
+    b.tbl_srcode_start_date,
+    a.GCAPMR_date_of_diagnosis
+  FROM
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+  ON
+    a.person_id = b.person_id
+  JOIN
+    (SELECT 
+        CAST(code AS STRING) AS code, 
+        term
+      FROM
+        `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.fam_hyperchol_codes`) c
+  ON
+    b.snomedcode = c.code
+  WHERE
+    b.tbl_srcode_start_date <= a.GCAPMR_date_of_diagnosis)
+  
+  WHERE person_id NOT IN (SELECT person_id FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.working_tale_15_07)
+)
+
+
+
+
+#??? TOWNSEND DEPRIVATION SCORE
+#Used LSOA to TS score from here https://statistics.ukdataservice.ac.uk/dataset/2011-uk-townsend-deprivation-scores/resource/51e32107-9e2f-4a30-9e58-92f80c8ec10e?inner_span=True
+
+
+SELECT person_id, TDS
+
+FROM 
+
+(SELECT person_id, 0 as TDS FROM yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids
+
+WHERE person_id NOT IN 
+(SELECT person_id FROM (WITH ranked_data AS (
+  SELECT 
+    person_id, 
+    lsoa, 
+    TDS,
+    ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY TDS ASC) as row_num
+  FROM (
+    SELECT c.person_id, a.lsoa, b.TDS
+    FROM 
+    (SELECT a.person_id, a.lsoa
+    FROM yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_person_lsoa_kk a, 
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b
+    WHERE a.person_id = b.person_id AND
+    a.person_id NOT IN 
+    (SELECT person_id FROM 
+    (SELECT c.person_id, a.lsoa, b.TDS, b.quintile
+    FROM yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_person_lsoa a
+    INNER JOIN 
+    yhcr-prd-phm-bia-core.CB_MYSPACE_KF.townsend_LSOA b
+    ON a.lsoa = b.GEO_CODE
+    INNER JOIN
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids c
+    ON c.person_id = a.person_id)) ) a
+    INNER JOIN 
+    yhcr-prd-phm-bia-core.CB_MYSPACE_KF.townsend_LSOA b
+    ON a.lsoa = b.GEO_CODE
+    INNER JOIN
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids c
+    ON c.person_id = a.person_id
+    
+    UNION DISTINCT
+    
+    SELECT c.person_id, a.lsoa, b.TDS
+    FROM yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_person_lsoa a
+    INNER JOIN 
+    yhcr-prd-phm-bia-core.CB_MYSPACE_KF.townsend_LSOA b
+    ON a.lsoa = b.GEO_CODE
+    INNER JOIN
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids c
+    ON c.person_id = a.person_id
+  )
+)
+SELECT person_id, lsoa, TDS
+FROM ranked_data
+WHERE row_num = 1)
+
+))
+
+UNION ALL 
+
+SELECT 
+person_id, TDS
+
+FROM 
+
+(WITH ranked_data AS (
+  SELECT 
+    person_id, 
+    lsoa, 
+    TDS,
+    ROW_NUMBER() OVER (PARTITION BY person_id ORDER BY TDS ASC) as row_num
+  FROM (
+    SELECT c.person_id, a.lsoa, b.TDS
+    FROM 
+    (SELECT a.person_id, a.lsoa
+    FROM yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_person_lsoa_kk a, 
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids b
+    WHERE a.person_id = b.person_id AND
+    a.person_id NOT IN 
+    (SELECT person_id FROM 
+    (SELECT c.person_id, a.lsoa, b.TDS, b.quintile
+    FROM yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_person_lsoa a
+    INNER JOIN 
+    yhcr-prd-phm-bia-core.CB_MYSPACE_KF.townsend_LSOA b
+    ON a.lsoa = b.GEO_CODE
+    INNER JOIN
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids c
+    ON c.person_id = a.person_id)) ) a
+    INNER JOIN 
+    yhcr-prd-phm-bia-core.CB_MYSPACE_KF.townsend_LSOA b
+    ON a.lsoa = b.GEO_CODE
+    INNER JOIN
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids c
+    ON c.person_id = a.person_id
+    
+    UNION DISTINCT
+    
+    SELECT c.person_id, a.lsoa, b.TDS
+    FROM yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_person_lsoa a
+    INNER JOIN 
+    yhcr-prd-phm-bia-core.CB_MYSPACE_KF.townsend_LSOA b
+    ON a.lsoa = b.GEO_CODE
+    INNER JOIN
+    yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids c
+    ON c.person_id = a.person_id
+  )
+)
+SELECT person_id, lsoa, TDS
+FROM ranked_data
+WHERE row_num = 1)
+
+
+#QRISK SUPPL 2 - using avg bmi and avg systolic bp
+SELECT *
+
+FROM 
+(SELECT
+  a.person_id as patid,
+  l.gender,
+  a.Age_GCAPMR_Diagnosis AS age,
+  g.atrial_fibrillation,
+  j.atypical_antipsycotics AS atypical_antipsy,
+  k.steroid_tablets AS regular_steroid_tablets,
+  n.erectile_disfunction,
+  o.migraines AS migraine,
+  e.rheumatoid_arthritis,
+  f.chronic_kidney_disease,
+  h.severe_mental_illness,
+  i.systemic_lupus_erythematosus AS systemic_lupus_erythematosis,
+  q.blood_pressure_treatment,
+  d.diabetes1,
+  m.diabetes2,
+  p.weight,
+  p.height,
+  b.ethnicity AS ethinicity,
+  r.heart_attack_relative,
+  s.tc_hdl_ratio AS cholesterol_HDL_ratio,
+  t.closest_systolic AS systolic_blood_pressure, 
+  u.st_dev_systolic AS std_systolic_blood_pressure,
+  v.TDS AS townsend,
+  c.smoking_status AS smoke
+
+
+  FROM
+  yhcr-prd-phm-bia-core.CB_1745.PMR_GCA_Cohort a
+
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ethnicity_QRISK b ON a.person_id = b.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.smoking_status_QRISK c ON a.person_id = c.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.diabetes1_QRISK d ON a.person_id = d.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ra_QRISK e ON a.person_id = e.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ckd_QRISK f ON a.person_id = f.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.af_QRISK g ON a.person_id = g.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.severe_mental_illness_QRISK h ON a.person_id = h.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.sle_QRISK i ON a.person_id = i.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.atypical_antipsycotics_QRISK j ON a.person_id = j.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.steroid_tablets_QRISK k ON a.person_id = k.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.gender_QRISK l ON a.person_id = l.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.diabetes2_QRISK m ON a.person_id = m.person_id
+INNER JOIN 
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.ed_QRISK n ON a.person_id = n.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.migraines_QRISK o ON a.person_id = o.person_id
+INNER JOIN 
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_suppl2_QRISK p ON a.person_id = p.person_id
+INNER JOIN 
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.blood_pressure_treatment_QRISK q ON a.person_id = q.person_id
+INNER JOIN
+  yhcr-prd-phm-bia-core.CB_MYSPACE_KF.fam_hx_mi_QRISK r ON a.person_id = r.person_id
+INNER JOIN
+ yhcr-prd-phm-bia-core.CB_MYSPACE_KF.tc_hdl_ratio_QRISK s ON a.person_id = s.person_id
+INNER JOIN
+ yhcr-prd-phm-bia-core.CB_MYSPACE_KF.systolic_bp_suppl2_QRISK t ON a.person_id = t.person_id
+INNER JOIN
+yhcr-prd-phm-bia-core.CB_MYSPACE_KF.st_dev_systolic_suppl2_QRISK u ON a.person_id = u.person_id
+INNER JOIN 
+yhcr-prd-phm-bia-core.CB_MYSPACE_KF.townsend_QRISK v ON a.person_id = v.person_id)
+
+WHERE age <= 84
+
+
+
+#BMI
+
+SELECT person_id, height, weight
+
+FROM (SELECT person_id, MAX(height) as height, MAX(weight) as weight
+
+FROM yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_accurr_3
+
+GROUP BY person_id)
+
+
+UNION DISTINCT
+
+SELECT person_id, height, weight
+
+FROM
+
+(SELECT 
+
+person_id, assigned_height as height, calculated_weight as weight
+
+FROM 
+(WITH base_data AS (
+  SELECT
+    person_id,
+    MAX(gender) AS gender,
+    MAX(age) AS Age_GCAPMR_Diagnosis,
+    CASE
+      WHEN MAX(gender) = 0 THEN 27.150817602390489  -- Men
+      WHEN MAX(gender) = 1 THEN 27.731482137760295  -- Women
+      ELSE NULL
+    END AS avg_epi_bmi,
+    MAX(CASE
+      WHEN gender = 0 THEN  -- Men
+        CASE
+          WHEN age BETWEEN 45 AND 54 THEN 176.1
+          WHEN age BETWEEN 55 AND 64 THEN 175.0
+          WHEN age BETWEEN 65 AND 74 THEN 173.2
+          WHEN age >= 75 THEN 171.1
+          ELSE NULL
+        END
+      WHEN gender = 1 THEN  -- Women
+        CASE
+          WHEN age BETWEEN 45 AND 54 THEN 163.2
+          WHEN age BETWEEN 55 AND 64 THEN 162.0
+          WHEN age BETWEEN 65 AND 74 THEN 159.8
+          WHEN age >= 75 THEN 157.1
+          ELSE NULL
+        END
+      ELSE NULL
+    END) AS assigned_height
+  FROM (
+    SELECT
+      a.person_id,
+      l.gender,
+      a.Age_GCAPMR_Diagnosis AS age
+    FROM
+      `yhcr-prd-phm-bia-core.CB_1745.PMR_GCA_Cohort` a
+    LEFT JOIN
+      `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.gender_QRISK` l ON a.person_id = l.person_id
+    WHERE a.person_id NOT IN (
+      SELECT person_id 
+      FROM `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.bmi_accurr_3`
+      WHERE weight IS NOT NULL
+    )
+  )
+  GROUP BY person_id
+)
+
+SELECT
+  person_id,
+  gender,
+  Age_GCAPMR_Diagnosis,
+  avg_epi_bmi,
+  assigned_height,
+  ROUND(avg_epi_bmi * POWER(assigned_height / 100, 2), 1) AS calculated_weight
+FROM base_data ))
+
+
+
+***
+
+
+#Systolic BP
+
+WITH calculated_bp AS (
+  SELECT 
+    b.person_id,
+    CASE
+      WHEN l.gender = 1 THEN  -- Women
+        CASE
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 50 AND 59 THEN 130
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 60 AND 69 THEN 136
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 70 AND 79 THEN 137
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 80 AND 84 THEN 143
+          ELSE NULL
+        END
+      WHEN l.gender = 0 THEN  -- Men
+        CASE
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 50 AND 59 THEN 129
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 60 AND 69 THEN 136
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 70 AND 79 THEN 137
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 80 AND 84 THEN 134
+         ELSE NULL
+        END
+      ELSE NULL
+    END AS closest_systolic
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.PMR_GCA_Cohort` b
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.gender_QRISK` l ON b.person_id = l.person_id
+  WHERE
+    b.person_id NOT IN (
+      SELECT person_id 
+      FROM `yhcr-prd-phm-bia-core.CB_1745.For_Kat_GCAPMR_Closest_BP`
+    )
+)
+
+SELECT person_id, closest_systolic
+FROM calculated_bp
+
+UNION ALL 
+
+SELECT person_id, closest_systolic
+FROM `yhcr-prd-phm-bia-core.CB_1745.For_Kat_GCAPMR_Closest_BP`
+
+
+
+
+#SD Systolic BP
+
+
+WITH calculated_bp AS (
+  SELECT 
+    b.person_id,
+    CASE
+      WHEN l.gender = 1 THEN  -- Women
+        CASE
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 50 AND 59 THEN 12.05528795461959
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 60 AND 69 THEN 13.373754911122802
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 70 AND 79 THEN 14.68669516021431
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 80 AND 84 THEN 15.319987224734321
+          ELSE NULL
+        END
+      WHEN l.gender = 0 THEN  -- Men
+        CASE
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 50 AND 59 THEN 12.200638493036678
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 60 AND 69 THEN 13.051617804679077
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 70 AND 79 THEN 13.808560926229649
+          WHEN b.Age_GCAPMR_Diagnosis BETWEEN 80 AND 84 THEN 14.32510587572084
+         ELSE NULL
+        END
+      ELSE NULL
+    END AS st_dev_systolic
+  FROM
+    `yhcr-prd-phm-bia-core.CB_1745.PMR_GCA_Cohort` b
+  JOIN
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_KF.gender_QRISK` l ON b.person_id = l.person_id
+  WHERE
+    b.person_id NOT IN (
+      SELECT person_id 
+      FROM `yhcr-prd-phm-bia-core.CB_1745.For_Kat_GCAPMR_BPSTDEV`
+    )
+)
+
+SELECT person_id, st_dev_systolic
+FROM calculated_bp
+
+UNION ALL 
+
+SELECT person_id, st_dev_systolic
+FROM `yhcr-prd-phm-bia-core.CB_1745.For_Kat_GCAPMR_BPSTDEV`
+
+
+
+
+
