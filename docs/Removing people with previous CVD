@@ -1,0 +1,44 @@
+#removed people who have prev stroke/chd/pad (saved as working table for below code)
+
+SELECT * FROM yhcr-prd-bradfor-bia-core.CB_1745.QRISK_suppl2_variables
+WHERE patid NOT IN 
+
+(SELECT person_id as patid FROM yhcr-prd-bradfor-bia-core.CB_1745.Master_comorbidities_table
+
+WHERE stroke = 1 OR chd = 1 OR pad = 1) 
+
+#fixed smoke null values
+
+UPDATE `yhcr-prd-bradfor-bia-core.CB_1745.work_table_23_03`
+SET smoke = 1
+WHERE smoke IS NULL;
+
+
+#Renamed working table that has smoke nulls fixed
+
+CREATE TABLE `yhcr-prd-bradfor-bia-core.CB_1745.QRISK_suppl2_variables_withoutcvd_smokenullsfixed` 
+AS 
+SELECT * FROM `yhcr-prd-bradfor-bia-core.CB_1745.work_table_23_03`
+
+
+#Just GCA
+SELECT * FROM yhcr-prd-bradfor-bia-core.CB_1745.QRISK_suppl2_variables_withoutcvd_smokenullsfixed
+
+WHERE patid IN
+
+(SELECT person_id FROM yhcr-prd-bradfor-bia-core.CB_1745.Final_cohort_with_steroids
+
+WHERE diagnosis IN ('Giant cell arteritis', 'Giant cell arteritis with polymyalgia rheumatica', 'Cerebral arteritis in giant cell arteritis', 'Giant cell arteritis without polymyalgia rheumatica', 'Giant cell arteritis NOS'))
+
+
+
+#Just PMR
+
+SELECT * FROM yhcr-prd-bradfor-bia-core.CB_1745.QRISK_suppl2_variables_withoutcvd_smokenullsfixed
+
+WHERE patid IN
+
+(SELECT person_id FROM yhcr-prd-bradfor-bia-core.CB_1745.Final_cohort_with_steroids
+
+WHERE diagnosis IN ('Polymyalgia rheumatica', 'Polymyalgia (& [rheumatica])'))
+
