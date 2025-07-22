@@ -1,0 +1,23 @@
+WITH ranked_lsoa AS (
+    SELECT
+        b.person_id,
+        b.lsoa,
+        ROW_NUMBER() OVER (PARTITION BY b.person_id ORDER BY b.lsoa) AS rn
+    FROM yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_person_lsoa b
+),
+ranked_imd AS (
+    SELECT
+        c.lsoa_code,
+        c.index_of_multiple_deprivation_decile,
+        c.index_of_multiple_deprivation_rank,
+        ROW_NUMBER() OVER (PARTITION BY c.lsoa_code ORDER BY c.index_of_multiple_deprivation_rank) AS rn
+    FROM yhcr-prd-phm-bia-core.CB_LOOKUPS.tbl_IMD_by_LSOA c
+)
+SELECT COUNT(a.person_id) as number,
+       imd.index_of_multiple_deprivation_decile as IMD_decile
+FROM yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids a
+LEFT JOIN ranked_lsoa lsoa
+       ON a.person_id = lsoa.person_id AND lsoa.rn = 1
+LEFT JOIN ranked_imd imd
+       ON lsoa.lsoa = imd.lsoa_code AND imd.rn = 1
+GROUP BY imd.index_of_multiple_deprivation_decile
