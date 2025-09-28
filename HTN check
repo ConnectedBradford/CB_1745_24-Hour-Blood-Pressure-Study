@@ -1,0 +1,110 @@
+CREATE OR REPLACE TABLE `yhcr-prd-phm-bia-core.CB_2172.cb_2172_hypertension_value_check` AS (
+WITH temp_hypertension_coded AS (
+  -- This is a placeholder. Replace it with your actual table or list of person_id
+  SELECT person_id
+  FROM `your_dataset.your_hypertension_coded_table`
+),
+diagnosis_by_value AS (
+  WITH a AS (
+    SELECT 
+      person_id, 
+      ctv3text,
+      CAST(numericvalue AS BIGNUMERIC) AS numericvalue_1,
+      idappointment, 
+      dateevent, 
+      EXTRACT(DATE FROM dateevent) AS date_record,
+      CASE 
+        WHEN snomedcode IN ('400975005','163031004','407557002', '407555005') THEN 'diastolic'
+        WHEN snomedcode IN ('163033001','163030003','163034007','163035008','407554009','407556006','400974009','163020007') THEN 'systolic'
+        WHEN snomedcode IN ('413605002','198000000000000','314462001') THEN 'home diastolic'
+        WHEN snomedcode IN ('314449000','413606001','1.98E+14') THEN 'home systolic'
+        ELSE NULL 
+      END AS bp_reading
+    FROM `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` 
+    WHERE person_id IN (
+      SELECT person_id 
+      FROM temp_hypertension_coded
+    )
+    ORDER BY dateevent
+  ), 
+  b AS (
+    SELECT 
+      a.*,
+      c.first_episodestartdate
+    FROM a
+    LEFT JOIN `yhcr-prd-phm-bia-core.CB_2172.temp_cb_2172_ch_cohort_demographic` c
+    ON a.person_id = c.person_id
+    WHERE bp_reading IS NOT NULL
+  ),
+  d AS (
+    SELECT 
+      person_id, 
+      date_record,
+      bp_reading,
+      MIN(numericvalue_1) AS min_bp
+    FROM b
+    WHERE dateevent < first_episodestartdate 
+    AND (DATETIME_DIFF(first_episodestartdate, dateevent, YEAR) <= 2) 
+    AND (numericvalue_1 > 10)
+    GROUP BY person_id, date_record, bp_reading
+    ORDER BY person_id, date_record
+  ),
+  e AS (
+    SELECT
+      person_id,
+      bp_reading,
+      min_bp,
+      ROW_NUMBER() OVER (PARTITION BY person_id, bp_reading ORDER BY min_bp DESC) AS bp_reading_seq,
+      date_record
+    FROM d
+    ORDER BY person_id
+  ),
+  max_value AS (
+    SELECT *
+    FROM e 
+    WHERE bp_reading_seq = 1
+  ),
+  min_value AS (
+    SELECT *
+    FROM e 
+    WHERE bp_reading_seq = 2
+  ),
+  min_max_join AS (
+    SELECT
+      max_value.person_id, 
+      max_value.bp_reading,
+      max_value.min_bp AS first_reading,
+      min_value.min_bp AS second_reading
+    FROM max_value 
+    INNER JOIN min_value ON
+      max_value.person_id = min_value.person_id 
+      AND max_value.bp_reading = min_value.bp_reading
+    ORDER BY person_id
+  ),
+  htn_code AS (
+    SELECT
+      person_id, 
+      CASE 
+        WHEN bp_reading = 'diastolic' AND (first_reading > 90) AND (second_reading > 90) THEN 'yes'
+        WHEN bp_reading = 'systolic' AND (first_reading > 140) AND (second_reading > 140) THEN 'yes'
+        WHEN bp_reading = 'home systolic' AND (first_reading > 135) AND (second_reading > 135) THEN 'yes'
+        WHEN bp_reading = 'home diastolic' AND (first_reading > 85) AND (second_reading > 85) THEN 'yes' 
+        ELSE 'no'
+      END AS hypertension_numeric
+    FROM min_max_join
+    ORDER BY person_id
+  )
+  SELECT DISTINCT *
+  FROM htn_code
+  WHERE hypertension_numeric = 'yes'
+)
+SELECT 
+  ee.person_id,
+  CASE 
+    WHEN diagnosis_by_value.hypertension_numeric = 'yes' THEN 'yes' 
+    ELSE 'no' 
+  END AS hypertension 
+FROM temp_hypertension_coded ee 
+LEFT JOIN diagnosis_by_value 
+ON ee.person_id = diagnosis_by_value.person_id
+);
