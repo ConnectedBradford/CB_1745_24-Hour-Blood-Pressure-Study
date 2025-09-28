@@ -1,0 +1,115 @@
+WITH bp_primary_care AS (
+    SELECT 
+        a.person_id, 
+        b.ctv3code, 
+        b.ctv3text,
+        b.snomedcode,
+        CAST(b.numericvalue AS BIGNUMERIC) AS bp_value,
+        b.dateevent,
+        a.GCAPMR_date_of_diagnosis
+    FROM `yhcr-prd-phm-bia-core.CB_1745.Final_cohort_with_steroids` a
+    INNER JOIN `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+    ON a.person_id = b.person_id
+    WHERE CAST(b.snomedcode AS STRING) IN (
+        SELECT CAST(code AS STRING) 
+        FROM `yhcr-prd-phm-bia-core.CB_MYSPACE_TBK.BP_recording_codes`
+    ) 
+    AND b.dateevent > a.GCAPMR_date_of_diagnosis
+),
+
+bp_primary_care_filtered AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (PARTITION BY bp_value, dateevent, person_id) AS dup_count
+    FROM bp_primary_care
+    WHERE bp_value > 10
+),
+
+bp_readings_filtered_no_duplicates AS (
+    SELECT
+        *
+    FROM bp_primary_care_filtered
+    WHERE dup_count = 1
+),
+
+diastolic AS (
+    SELECT
+        *,
+        bp_value AS diastolic_value
+    FROM bp_readings_filtered_no_duplicates
+    WHERE ctv3text LIKE "%iastolic%"
+),
+
+systolic AS (
+    SELECT 
+        *,
+        bp_value AS systolic_value
+    FROM bp_readings_filtered_no_duplicates
+    WHERE ctv3text LIKE "%ystolic%"
+),
+
+reading_join AS (
+    SELECT 
+        diastolic.person_id,
+        systolic_value,
+        diastolic_value,
+        diastolic.dateevent AS datetimeevent_diastolic,
+        systolic.dateevent AS datetimeevent_systolic,
+        diastolic.GCAPMR_date_of_diagnosis,
+        EXTRACT(DATE FROM systolic.dateevent) AS date_systolic
+    FROM diastolic
+    FULL JOIN systolic 
+    ON diastolic.person_id = systolic.person_id AND diastolic.dateevent = systolic.dateevent
+    WHERE 
+        DATETIME_DIFF(diastolic.dateevent, diastolic.GCAPMR_date_of_diagnosis, DAY) < 366 
+        AND systolic_value > 79 
+        AND systolic_value < 230 
+        AND diastolic_value > 49
+),
+
+filter_daily AS (
+    SELECT
+        *,
+        RANK() OVER (PARTITION BY person_id ORDER BY datetimeevent_systolic) AS bp_seq,
+        ROW_NUMBER() OVER (PARTITION BY person_id, date_systolic ORDER BY systolic_value) AS systolic_daily
+    FROM reading_join
+)
+
+SELECT
+    * 
+FROM filter_daily
+WHERE systolic_daily = 1 AND bp_seq = 1
+ORDER BY person_id;
+
+--next codes starts here for average BP
+
+WITH daily_averages AS (
+    SELECT
+        person_id,
+        date_systolic AS reading_date,
+        AVG(systolic_value) AS daily_mean_sys,
+        AVG(diastolic_value) AS daily_mean_dias
+    FROM
+        blood_pressure_readings
+    GROUP BY
+        person_id,
+        date_systolic
+)
+SELECT
+    person_id,
+    AVG(daily_mean_sys) AS mean_sys,
+    AVG(daily_mean_dias) AS mean_dias
+FROM
+    daily_averages
+GROUP BY
+    person_id;
+
+
+--Next code here for SD
+
+SELECT
+    AVG(mean_systolic) AS avg_systolic,
+    AVG(mean_diastolic) AS avg_diastolic,
+    STDDEV(mean_systolic) AS stddev_systolic,
+    STDDEV(mean_diastolic) AS stddev_diastolic
+FROM total_averages;
