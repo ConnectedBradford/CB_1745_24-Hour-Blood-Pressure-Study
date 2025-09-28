@@ -1,0 +1,55 @@
+WITH CRP_primary_care AS (
+    SELECT 
+        a.person_id, 
+        b.ctv3code, 
+        b.ctv3text,
+        b.snomedcode,
+        CAST(b.numericvalue AS BIGNUMERIC) AS CRP_value,
+        b.dateevent,
+        a.Date_GCAPMR_Diagnosis
+    FROM `yhcr-prd-phm-bia-core.CB_1745.PMR_GCA_Cohort` a
+    INNER JOIN `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` b
+    ON a.person_id = b.person_id
+    WHERE b.snomedcode IN ('999651000000107', '1001371000000100')
+      AND b.dateevent < a.Date_GCAPMR_Diagnosis
+      AND DATETIME_DIFF(b.dateevent, a.Date_GCAPMR_Diagnosis, DAY) < 183
+),
+
+CRP_primary_care_filtered AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (PARTITION BY person_id, CRP_value, dateevent) AS dup_count
+    FROM CRP_primary_care
+    WHERE CRP_value > 0
+),
+
+CRP_readings_filtered_no_duplicates AS (
+    SELECT
+        *
+    FROM CRP_primary_care_filtered
+    WHERE dup_count = 1
+),
+
+reading_join AS (
+    SELECT 
+        person_id,
+        CRP_value,
+        dateevent AS datetimeevent_CRP,
+        Date_GCAPMR_Diagnosis,
+        EXTRACT(DATE FROM dateevent) AS date_CRP
+    FROM CRP_readings_filtered_no_duplicates
+),
+
+filter_daily AS (
+    SELECT
+        *,
+        RANK() OVER (PARTITION BY person_id ORDER BY datetimeevent_CRP DESC) AS CRP_seq, 
+        ROW_NUMBER() OVER (PARTITION BY person_id, date_CRP ORDER BY CRP_value) AS systolic_daily
+    FROM reading_join
+)
+
+SELECT
+    *
+FROM filter_daily
+WHERE CRP_seq = 1
+ORDER BY person_id;
