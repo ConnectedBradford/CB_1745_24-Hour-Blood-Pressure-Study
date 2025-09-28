@@ -1,0 +1,26 @@
+SELECT DISTINCT
+    disease.person_id,
+    gender,
+    FORMAT_DATE('%d-%m-%Y', DATE(Person.Year_of_birth, Person.month_of_birth, Person.day_of_birth)) AS DOB,
+    FORMAT_DATE('%d-%m-%Y', DATE(FIRST_VALUE(RD.tbl_srcode_start_date) OVER (PARTITION BY disease.person_id ORDER BY RD.tbl_srcode_start_date ASC))) AS diagnosis_date,
+    TIMESTAMP_DIFF(RD.tbl_srcode_start_date, DATE(Person.Year_of_birth, Person.month_of_birth, Person.day_of_birth), YEAR) AS age_at_diagnosis,
+    FIRST_VALUE(ctv3code) OVER (PARTITION BY disease.person_id ORDER BY RD.tbl_srcode_start_date ASC) AS ctv3code,
+    FIRST_VALUE(ctv3text) OVER (PARTITION BY disease.person_id ORDER BY RD.tbl_srcode_start_date ASC) AS ctv3text
+FROM 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare_V8.tbl_srpatient` AS Patient
+LEFT JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare_V8.person` AS Person ON Patient.person_id = Person.person_id
+LEFT JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare_V8.tbl_srcode` AS Disease ON Patient.person_id = Disease.person_id
+LEFT JOIN 
+    RankedDiagnoses RD ON Patient.person_id = RD.person_id
+LEFT JOIN 
+    `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare_V8.tbl_srpatientregistration` AS Reg ON Patient.person_id = Reg.person_id
+WHERE 
+    RD.diagnosis_rank = 1
+    AND TIMESTAMP_DIFF(RD.tbl_srcode_start_date, DATE(Person.Year_of_birth, Person.month_of_birth, Person.day_of_birth), YEAR) > 49
+    AND (ctv3code IN ('G755.', 'G7550', 'G755z', 'Nyu41', 'X705l', 'X705m') OR ctv3code IN ('XE1FJ', 'X705l'))
+    AND Disease.tbl_srcode_start_date BETWEEN '2000-01-01' AND '2024-01-01'
+    AND DATE_DIFF(Disease.tbl_srcode_start_date, Reg.tbl_srpatientregistration_start_date, DAY) < 0
+ORDER BY 
+    age_at_diagnosis;
