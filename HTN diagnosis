@@ -1,0 +1,38 @@
+WITH RankedDiagnoses AS (
+    SELECT 
+        code.person_id,
+        code.tbl_srcode_start_date,
+        code.ctv3code,
+        code.ctv3text,
+        ROW_NUMBER() OVER (PARTITION BY code.person_id ORDER BY code.tbl_srcode_start_date, code.ctv3code) AS diagnosis_rank
+    FROM 
+        `yhcr-prd-phm-bia-core.CB_FDM_PrimaryCare.tbl_srcode` AS code
+    WHERE
+        code.ctv3code IN ('14A2.', '21261', '2466', '2467', '662..')
+),
+EarliestDiagnoses AS (
+    SELECT 
+        person_id,
+        tbl_srcode_start_date,
+        ctv3code,
+        ctv3text
+    FROM
+        RankedDiagnoses
+    WHERE
+        diagnosis_rank = 1
+)
+
+SELECT 
+    GCA.person_id,
+    GCA.GCAPMR_diagnosis_date,
+    FORMAT_DATE('%Y-%m-%d', ED.tbl_srcode_start_date) AS HTN_diagnosis_date,
+    ED.ctv3code,
+    ED.ctv3text
+FROM
+    `yhcr-prd-phm-bia-core.CB_MYSPACE_TBK.GCAPMR2905` AS GCA
+LEFT JOIN
+    EarliestDiagnoses AS ED ON GCA.person_id = ED.person_id
+WHERE
+    ED.tbl_srcode_start_date > PARSE_DATETIME('%Y-%m-%d', GCA.GCAPMR_diagnosis_date)
+ORDER BY 
+    GCA.person_id;
