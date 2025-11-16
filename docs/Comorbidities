@@ -1455,8 +1455,3 @@ FROM
   FinalSmokingStatus)
 
 GROUP BY smoking_status
-
-***
-#QRISK
--- Codelists: CVD risk assessment score QOF/ Cardiovascular disease (CVD) risk assessment codes greater than 20 per cent / Cardiovascular disease (CVD) risk assessment done / 
--- Unsuitable for QRISK: Codes indicating cardiovascular disease (CVD) risk assessment was deemed unsuitable for the patient
