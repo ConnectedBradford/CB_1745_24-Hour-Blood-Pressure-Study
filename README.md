@@ -27,7 +27,6 @@ Scripts outside the code folder were mainly developed before May 2025 by previou
 🔄analysis (scripts beginning 4)
 
 
-## Data linkage and analysis
 
 ### 1. Data linkage between patient and AMBP for Bradford
 
