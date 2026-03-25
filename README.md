@@ -1,24 +1,30 @@
-# CB_1745
-CB_1745_24-Hour-Blood-Pressure-Study
+# CB_1745_24-Hour-Blood-Pressure-Study
 
+Scripts outside the code folder were mainly developed before May 2025 by previous team members. Scripts created by Bin are stored in the code folder. The scripts in the code folder are organised into four sections.:
 
-Scripts are organised into four chunks:
+🔄Code lists (scripts beginning 1)
 
-Code lists (scripts beginning 1)
 1_1_CB_database_check.R
+
 1_2_codelist_development.R
+
 1_3_codelist_map_readv2.R
+
 1_4_excluded_codelist.R
 
-observations (scripts beginning 2)
+:white_check_mark:  Observations (scripts beginning 2)
+
 2_1_data_linkage_person_BP_bradford.R 
+
 2_2_stat_fall_nofall_ICD.R
 
-cohort creation (scripts beginning 3)
+🔄cohort creation (scripts beginning 3)
+
 3_1_efi_prepare.R
+
 3_2qrisk_code_check.R
 
-analysis (scripts beginning 4)
+🔄analysis (scripts beginning 4)
 
 
 ## Data linkage and analysis
